@@ -92,6 +92,10 @@ app.post('/logout', function(req, res){
   res.redirect('/');
 });
 
+app.get('/picture', function(req, res){
+  if(!req.user) return res.status(401).send("Unauthorised");
+  request(req.user.normal_picture).pipe(res)
+})
 
 app.get('/data/fitnessActivities', function(req, res){
   if(!req.user) return res.status(401).send("Unauthorised")
