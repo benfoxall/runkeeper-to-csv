@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>RK Data</title>
+  </head>
+  <body>
+
+    {{^user}}
+      <form action="/auth/runkeeper">
+        <button>Log in</button>
+      </form>
+    {{/user}}
+
+    {{#user}}
+      <img src="{{normal_picture}}" />
+      <h3>{{name}}</h3>
+      <form action="/logout" method="post">
+        <button>logout</button>
+      </form>
+
+      <pre id="output"></pre>
+
+      <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
+
+      <script type="text/javascript">
+        reqwest('/data/fitnessActivities')
+          .then(function(res){
+            console.log(res.next)
+            output.innerText += res.items.map(function(i){
+              return [
+                i.type,
+                (i.total_distance/1000).toPrecision(2) + 'km',
+                i.start_time
+              ].join('\t')
+            }).join('\n')
+          })
+      </script>
+    {{/user}}
+
+  </body>
+</html>
