@@ -81,16 +81,21 @@
           //   console.log("ACTIVITY", act);
           // })
 
+          var htm = '';
 
           db
             .activities
+            .where('start_time_norm')
+            .above(0)
+            .reverse()
+            .each(function(item, cursor){
+              htm += row(item);
+            })
+            .then(function(){
+              output.innerText = htm;
+            })
+            .catch(console.error.bind(console));
 
-            .where("userID").equals({{_id}})
-
-            .sortBy("start_time_norm", function(items) {
-              items.reverse();
-              output.innerText = items.map(row).join('')
-            });
 
 
 
