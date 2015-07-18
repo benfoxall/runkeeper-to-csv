@@ -1,0 +1,39 @@
+body{
+  font-family: helvetica neue, helvetica, sans-serif;
+  margin:3em;
+}
+header {
+  margin: 2em 0;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 600px) {
+  header {
+    flex-direction:column;
+  }
+}
+
+header img{
+  vertical-align: middle;
+  border-radius: 100%;
+  background: #eee;
+}
+
+header h3{
+  font-size:3em;
+  margin:0 .5em;
+  font-weight: 100;
+  white-space: nowrap;
+}
+header a{
+
+  font-weight: 100;
+  color:#999;
+  text-decoration: none;
+  padding:.25em;
+  transition:all .2s;
+}
+header a:hover{
+  color:#000;
+}
