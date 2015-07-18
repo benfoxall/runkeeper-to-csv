@@ -76,35 +76,71 @@
 
           list('/data/fitnessActivities', 20)
 
-          // reqwest('data/fitnessActivities/:id')
-          // .then(function(act){
-          //   console.log("ACTIVITY", act);
-          // })
-
-          var htm = '';
-
-          db
-            .activities
-            .where('start_time_norm')
-            .above(0)
-            .reverse()
-            .each(function(item, cursor){
-              htm += row(item);
-            })
-            .then(function(){
-              output.innerText = htm;
-            })
-            .catch(console.error.bind(console));
 
 
 
+          function render(){
+            console.time('render')
+            var htm = '';
+
+            db
+              .activities
+              .where('start_time_norm')
+              .above(0)
+              .reverse()
+              .each(function(item, cursor){
+                htm += row(item);
+              })
+              .then(function(){
+                output.innerText = htm;
+                console.timeEnd('render')
+              })
+              .catch(console.error.bind(console));
+          }
+
+          render();
+
+
+          // pull in the full data for an activity
+          function fill(id){
+            return reqwest('data' + id)
+              .then(function(data){
+                return db.activities.update(id, data)
+              })
+              .then(function (updated) {
+                  if (updated)
+                      console.log ("updated " + id);
+                  else
+                      console.log ("NOT updated " + id);
+              });
+          }
+
+
+          // hacky test
+          function fillSome(n){
+            var five = [];
+            db
+              .activities
+              .where('start_time_norm')
+              .above(0)
+              .reverse()
+              .each(function(item, cursor){
+                if(!item.path && n-- >0){
+                  fill(item.uri);//.then(render)
+                }
+              })
+              .catch(console.error.bind(console));
+          }
+
+          fill('/fitnessActivities/142038704');
 
             function row(i){
               return [
                   i.type,
                   (i.total_distance/1000).toPrecision(2) + 'km',
                   i.start_time,
-                  i.uri
+                  i.uri,
+                  i.path ? i.path.length : '_'
                 ].join('\t') + '\n';
             }
 
