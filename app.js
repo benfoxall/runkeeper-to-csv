@@ -8,6 +8,7 @@ var session = require('express-session');
 var RedisStore = require('connect-redis')(session);
 var Redis = require('ioredis');
 var request = require('request');
+var url = require('url');
 
 var redis = new Redis(process.env.REDISTOGO_URL);
 var app = express();
@@ -98,8 +99,10 @@ app.get('/picture', function(req, res){
 app.get('/data/fitnessActivities', function(req, res){
   if(!req.user) return res.status(401).send("Unauthorised")
 
+  var url_parts = url.parse(req.url, true);
+
   request({
-    url:'https://api.runkeeper.com/fitnessActivities',
+    url:'https://api.runkeeper.com/fitnessActivities' + (url_parts.search || ''),
     headers: {
       'Authorization': 'Bearer ' + req.user._access_token,
       'Accept': 'application/vnd.com.runkeeper.FitnessActivityFeed+json'

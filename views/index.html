@@ -35,17 +35,28 @@
 
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
         <script type="text/javascript">
-          reqwest('/data/fitnessActivities')
-            .then(function(res){
-              console.log(res.next)
-              output.innerText += res.items.map(function(i){
-                return [
-                  i.type,
-                  (i.total_distance/1000).toPrecision(2) + 'km',
-                  i.start_time
-                ].join('\t')
-              }).join('\n')
-            })
+
+          function request(url, count) {
+            count--;
+
+            reqwest(url)
+              .then(function(res){
+                if(res.next && count > 0){
+                    request('/data' + res.next, count)
+                }
+
+                output.innerText += res.items.map(function(i){
+                  return [
+                    i.type,
+                    (i.total_distance/1000).toPrecision(2) + 'km',
+                    i.start_time
+                  ].join('\t')
+                }).join('\n') + '\n\n';
+              })
+          }
+          
+          request('/data/fitnessActivities', 20)
+
         </script>
       {{/user}}
 
