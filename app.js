@@ -54,7 +54,8 @@ var opts = {
   store: new RedisStore({
     client: redis
   }),
-  secret: process.env.SESSION_SECRET || 'keyboard cat'
+  secret: process.env.SESSION_SECRET || 'keyboard cat',
+  cookie: {path: '/', secure: false}
 }
 
 if (app.get('env') === 'production') {
