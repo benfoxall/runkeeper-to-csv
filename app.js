@@ -41,7 +41,8 @@ passport.use(new RunKeeperStrategy({
         normal_picture: data.normal_picture,
         url:            data.profile,
 
-        _access_token: accessToken
+        _access_token: accessToken,
+        _id:           profile.id
       })
     })
   }
@@ -106,6 +107,23 @@ app.get('/data/fitnessActivities', function(req, res){
     headers: {
       'Authorization': 'Bearer ' + req.user._access_token,
       'Accept': 'application/vnd.com.runkeeper.FitnessActivityFeed+json'
+    }
+  }).pipe(res);
+
+})
+
+
+app.get('/data/fitnessActivities/:id', function(req, res){
+  if(!req.user) return res.status(401).send("Unauthorised")
+
+  var url_parts = url.parse(req.url, true);
+
+  console.log('https://api.runkeeper.com/fitnessActivities/' + req.params.id + (url_parts.search || ''));
+  request({
+    url:'https://api.runkeeper.com/fitnessActivities/' + req.params.id + (url_parts.search || ''),
+    headers: {
+      'Authorization': 'Bearer ' + req.user._access_token,
+      'Accept': 'application/vnd.com.runkeeper.FitnessActivity+json'
     }
   }).pipe(res);
 

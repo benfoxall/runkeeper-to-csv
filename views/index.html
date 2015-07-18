@@ -19,7 +19,7 @@
         {{#user}}
           <img class="avatar" src="/picture" width="72" height="72">
           <h3>
-            {{name}}
+            {{name}} {{_id}}
           </h3>
           <p>
             <a href="/logout">sign out</a>
@@ -34,28 +34,74 @@
         <pre id="output"></pre>
 
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
+        <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
         <script type="text/javascript">
 
-          function request(url, count) {
+          var db = new Dexie("Runkeeper");
+          db.version(1).stores({
+            activities: "&uri,total_distance,userID,start_time_norm"
+          });
+          db.open();
+
+
+          function list(url, count) {
             count--;
 
             reqwest(url)
               .then(function(res){
                 if(res.next && count > 0){
-                    request('/data' + res.next, count)
+                    list('/data' + res.next, count)
                 }
 
-                output.innerText += res.items.map(function(i){
-                  return [
-                    i.type,
-                    (i.total_distance/1000).toPrecision(2) + 'km',
-                    i.start_time
-                  ].join('\t')
-                }).join('\n') + '\n\n';
+                res.items.forEach(function(item){
+                  item.userID = {{_id}};
+                  item.start_time_norm = +new Date(item.start_time);
+
+                  db
+                    .activities
+                    .add(item)
+                    .then(function(){
+                      output.innerText += row(item)
+                    })
+                    .catch(function(e){
+                      if(e.name == 'ConstraintError'){
+                        console.log('duplicate')
+                      } else {
+                        console.log(e);
+                      }
+                    })
+                })
               })
           }
-          
-          request('/data/fitnessActivities', 20)
+
+          list('/data/fitnessActivities', 20)
+
+          // reqwest('data/fitnessActivities/:id')
+          // .then(function(act){
+          //   console.log("ACTIVITY", act);
+          // })
+
+
+          db
+            .activities
+
+            .where("userID").equals({{_id}})
+
+            .sortBy("start_time_norm", function(items) {
+              items.reverse();
+              output.innerText = items.map(row).join('')
+            });
+
+
+
+            function row(i){
+              return [
+                  i.type,
+                  (i.total_distance/1000).toPrecision(2) + 'km',
+                  i.start_time,
+                  i.uri
+                ].join('\t') + '\n';
+            }
 
         </script>
       {{/user}}
