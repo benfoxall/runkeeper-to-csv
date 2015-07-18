@@ -74,8 +74,6 @@ app.engine('html', require('hbs').__express);
 // GET  /data/* proxy runkeeper
 
 app.get('/', function(req, res){
-  console.log(req.session)
-  console.log(req.user)
   res.render('index', { user: req.user });
 });
 
