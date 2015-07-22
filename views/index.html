@@ -37,11 +37,36 @@
         <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
         <script type="text/javascript">
 
+
           var db = new Dexie("Runkeeper");
           db.version(1).stores({
             activities: "&uri,total_distance,userID,start_time_norm"
           });
+          db.version(2).stores({
+            activities: "&uri",
+            summaries: "&id, userID, uri, state"
+          });
           db.open();
+
+
+
+          // function Activity() {
+          //
+          // }
+          //
+          // function Summary() {
+          //
+          // }
+          //
+          //
+          // db.summaries.mapToClass(Summary, {
+          //   id: String,
+          //   userID: Number,
+          //   uri: String,
+          //   state: String,
+          //   // unindexed
+          //   title: String,
+          // })
 
 
           function list(url, count) {
@@ -54,15 +79,10 @@
                 }
 
                 res.items.forEach(function(item){
-                  item.userID = {{_id}};
-                  item.start_time_norm = +new Date(item.start_time);
 
                   db
-                    .activities
-                    .add(item)
-                    .then(function(){
-                      output.innerText += row(item)
-                    })
+                    .summaries
+                    .add(indexToSummary(item))
                     .catch(function(e){
                       if(e.name == 'ConstraintError'){
                         console.log('duplicate')
@@ -78,18 +98,37 @@
 
 
 
+          // converter things
+
+          function indexToSummary(item){
+            var start = new Date(item.start_time).getTime();
+            return {
+              id: start + '-' + item.uri,
+              userId: {{_id}},
+              time: start,
+              uri: item.uri,
+              state: 'new',
+
+              label: {
+                type: item.type,
+                duration: item.duration,
+                distance: item.total_distance,
+                start_time: item.start_time
+              }
+            }
+          }
+
+
+
 
           function render(){
             console.time('render')
             var htm = '';
-
             db
-              .activities
-              .where('start_time_norm')
-              .above(0)
+              .summaries
               .reverse()
               .each(function(item, cursor){
-                htm += row(item);
+                htm += summaryToHTML(item);
               })
               .then(function(){
                 output.innerText = htm;
@@ -132,13 +171,13 @@
               .catch(console.error.bind(console));
           }
 
-          fill('/fitnessActivities/142038704');
+          // fill('/fitnessActivities/142038704');
 
-            function row(i){
+            function summaryToHTML(i){
               return [
-                  i.type,
-                  (i.total_distance/1000).toPrecision(2) + 'km',
-                  i.start_time,
+                  i.label.type,
+                  (i.label.distance/1000).toPrecision(2) + 'km',
+                  i.label.start_time,
                   i.uri,
                   i.path ? i.path.length : '_'
                 ].join('\t') + '\n';
