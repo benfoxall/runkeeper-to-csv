@@ -69,13 +69,12 @@
           // })
 
 
-          function list(url, count) {
-            count--;
+          function populate(url, count) {
 
-            reqwest(url)
+            reqwest('/data' + url)
               .then(function(res){
                 if(res.next && count > 0){
-                    list('/data' + res.next, count)
+                    populate(res.next, count - 1)
                 }
 
                 res.items.forEach(function(item){
@@ -94,7 +93,7 @@
               })
           }
 
-          list('/data/fitnessActivities', 20)
+          populate('/fitnessActivities', 20)
 
 
 
