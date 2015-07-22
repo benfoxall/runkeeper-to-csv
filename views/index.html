@@ -31,6 +31,8 @@
 
 
       {{#user}}
+        <button id="request">Request (all) </button> <button id="fill">Fill (50)</button> <button id="destroy">destroy</button>
+
         <pre id="output"></pre>
 
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
@@ -89,11 +91,11 @@
                         console.log(e);
                       }
                     })
-                })
+                });
+
+                render()
               })
           }
-
-          populate('/fitnessActivities', 20)
 
 
 
@@ -141,31 +143,46 @@
 
           // pull in the full data for an activity
           function fill(id){
-            return reqwest('data' + id)
+
+            return db.summaries
+                .where('uri')
+                .equals(id)
+                .modify({state: 'requesting'})
+              .then(function(){
+                return reqwest('data' + id)
+              })
               .then(function(data){
-                return db.activities.update(id, data)
+                console.log(data)
+                return db.activities.put(data)
+              })
+              .then(function(data){
+                db.summaries
+                    .where('uri')
+                    .equals(id)
+                    .modify({state: 'success'})
               })
               .then(function (updated) {
                   if (updated)
                       console.log ("updated " + id);
                   else
                       console.log ("NOT updated " + id);
+              })
+              .catch(function(r){
+                console.log("ERROR", r)
               });
           }
 
 
           // hacky test
           function fillSome(n){
-            var five = [];
             db
-              .activities
-              .where('start_time_norm')
-              .above(0)
+              .summaries
+              .where('state')
+              .equals('new')
               .reverse()
+              .limit(n)
               .each(function(item, cursor){
-                if(!item.path && n-- >0){
-                  fill(item.uri);//.then(render)
-                }
+                fill(item.uri).then(render)
               })
               .catch(console.error.bind(console));
           }
@@ -178,9 +195,25 @@
                   (i.label.distance/1000).toPrecision(2) + 'km',
                   i.label.start_time,
                   i.uri,
-                  i.path ? i.path.length : '_'
+                  i.state
                 ].join('\t') + '\n';
             }
+
+
+            document.getElementById('request').addEventListener('click', function(e){
+              populate('/fitnessActivities', 20)
+            }, false);
+
+
+            document.getElementById('fill').addEventListener('click', function(e){
+              fillSome(50);
+            }, false);
+
+            document.getElementById('destroy').addEventListener('click', function(e){
+              db.summaries.clear()
+                .then(function(){return db.activities.clear()})
+                .then(function(){render()})
+            }, false)
 
         </script>
       {{/user}}
