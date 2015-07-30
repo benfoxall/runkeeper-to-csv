@@ -52,7 +52,12 @@
 
 
       {{#user}}
-        <button id="request">Request (all) </button> <button id="fill">Fill (50)</button> <button id="destroy">destroy</button>
+        <dl>
+          <dt>found</dt> <dd id="ui-found">0</dd>
+          <dt>downloaded</dt> <dd id="ui-downloaded">0</dd>
+        </dl>
+
+        <button id="destroy">clear all data</button>
 
         <div class="downloads">
           <a href="#" id="download1">summary.csv</a>
@@ -68,54 +73,11 @@
         <pre id="output"></pre>
 
         <script type="text/javascript" src="bower_components/FileSaver/FileSaver.min.js"></script>
+        <script type="text/javascript" src="bower_components/async/dist/async.min.js"></script>
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
         <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
         <script type="text/javascript">
 
-
-          function Rows(el){
-            this.el = el;
-            this._map = {};
-          }
-
-          Rows.prototype.set = function(id, data, idx){
-            var tr = this._map[id];
-
-            if(!this._map[id]){
-              this.el.appendChild(tr = this._map[id] = document.createElement('tr'))
-            }
-
-            if(typeof(idx) !== 'undefined'){
-              // update only a particular column
-              var el = tr.childNodes[idx];
-              if(el) el.textContent = data;
-              console.log(el, data)
-              return;
-
-            }
-            // could be more efficient, but whatever
-            while (tr.firstChild) tr.removeChild(tr.firstChild)
-
-            data.forEach(function(item){
-                var td = document.createElement('td');
-                td.textContent = item;
-                tr.appendChild(td);
-            })
-          }
-
-          Rows.prototype.clear = function(){
-            while (this.el.firstChild) this.el.removeChild(this.el.firstChild)
-            this._map = {};
-          }
-
-          var elements = new Rows(document.getElementById('activities'));
-
-
-          /*
-            can be MASSIVELY simplified
-              * inferring time order from ID (probably bad)
-              * not displaying the full list of activities
-          */
           var db = new Dexie("Runkeeper");
           db.version(1).stores({
             activities: "&uri,total_distance,userID,start_time_norm"
@@ -124,157 +86,53 @@
             activities: "&uri",
             summaries: "&id, userID, uri, state"
           });
+          db.version(2).stores({
+            activities: "&uri"
+          });
           db.open();
 
-          function populate(url, count) {
+          var uris = [];
+          var downloaded = [];
 
+          db.activities.toCollection().keys(function(keys){
+            downloaded = downloaded.concat(keys);
+            document.getElementById('ui-downloaded').textContent = downloaded.length
+          })
+
+          var q = async.queue(function (uri, callback) {
+            db.activities
+              .where('uri').equals(uri)
+              .count(function(c){
+                if(c === 0)
+                  return reqwest('data' + uri)
+                          .then(function(data){
+                            downloaded.push(uri);
+                            document.getElementById('ui-downloaded').textContent = downloaded.length
+                            return db.activities.put(data)
+                          })
+              })
+              .then(callback)
+          }, 2);
+
+
+          function populateURIs(url) {
             reqwest('/data' + url)
               .then(function(res){
-                if(res.next && count > 0){
-                    populate(res.next, count - 1)
-                }
-
-                res.items.forEach(function(item){
-
-                  db
-                    .summaries
-                    .add(indexToSummary(item))
-                    .catch(function(e){
-                      if(e.name == 'ConstraintError'){
-                        console.log('duplicate')
-                      } else {
-                        console.log(e);
-                      }
-                    })
+                var items = res.items.map(function(item){
+                  return item.uri;
                 });
+                uris = uris.concat(items);
 
-                render()
+                q.push(items);
+
+
+
+                document.getElementById('ui-found').textContent = uris.length
+                if(res.next) populateURIs(res.next);
               })
           }
 
-
-
-          // converter things
-
-          function summaryId(item){
-            new Date(item.start_time).getTime() +  '-' + item.uri;
-          }
-
-          function indexToSummary(item){
-            var start = new Date(item.start_time).getTime();
-            return {
-              id: start + '-' + item.uri,
-              userId: {{_id}},
-              time: start,
-              uri: item.uri,
-              state: 'new',
-
-              label: {
-                type: item.type,
-                duration: item.duration,
-                distance: item.total_distance,
-                start_time: item.start_time
-              }
-            }
-          }
-
-
-          function renderItem(i){
-            elements.set(i.uri, [
-                i.label.type,
-                (i.label.distance/1000).toPrecision(2) + 'km',
-                i.label.start_time,
-                i.uri,
-                i.state
-            ])
-          }
-
-
-          function render(){
-            console.time('render')
-
-            db
-              .summaries
-              .reverse()
-              .each(renderItem)
-              .then(console.timeEnd.bind(console,'render'))
-              .catch(console.error.bind(console));
-          }
-
-          render();
-
-
-          // pull in the full data for an activity
-          function fill(id){
-
-            return db.summaries
-                .where('uri')
-                .equals(id)
-                .modify({state: 'requesting'})
-              .then(function(d){
-                elements.set(id, 'requesting', 4)
-                return reqwest('data' + id)
-              })
-              .then(function(data){
-                elements.set(id, 'success', 4)
-                return db.activities.put(data)
-              })
-              .then(function(data){
-                return db.summaries
-                    .where('uri')
-                    .equals(id)
-                    .modify({state: 'success'})
-              })
-              .then(function (updated) {
-                  if (updated)
-                      console.log ("updated " + id);
-                  else
-                      console.log ("NOT updated " + id);
-              })
-              .catch(function(r){
-                elements.set(id, 'error', 4)
-                console.log("ERROR", r)
-              });
-          }
-
-
-          // hacky test
-          function fillSome(n){
-            db
-              .summaries
-              .where('state')
-              .equals('new')
-              .reverse()
-              .limit(n)
-              .each(function(item, cursor){
-                fill(item.uri);
-              })
-              .catch(console.error.bind(console));
-          }
-
-          // fill('/fitnessActivities/142038704');
-
-            function summaryToHTML(i){
-              return [
-                  i.label.type,
-                  (i.label.distance/1000).toPrecision(2) + 'km',
-                  i.label.start_time,
-                  i.uri,
-                  i.state
-                ].join('\t') + '\n';
-            }
-
-
-
-
-            document.getElementById('request').addEventListener('click', function(e){
-              populate('/fitnessActivities', 20)
-            }, false);
-
-
-            document.getElementById('fill').addEventListener('click', function(e){
-              fillSome(50);
-            }, false);
+          populateURIs('/fitnessActivities');
 
             document.getElementById('destroy').addEventListener('click', function(e){
               db.summaries.clear()
