@@ -37,3 +37,19 @@ header a{
 header a:hover{
   color:#000;
 }
+
+.downloads{
+  padding: 1em 0;
+}
+
+.downloads a {
+  color: #fff;
+  background: #737373;
+  padding: .3em;
+  text-decoration: none;
+  border-radius: 3px;
+  -webkit-font-smoothing: antialiased;
+}
+.downloads a:hover {
+  background: #000;
+}

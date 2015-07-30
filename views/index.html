@@ -54,18 +54,18 @@
       {{#user}}
         <button id="request">Request (all) </button> <button id="fill">Fill (50)</button> <button id="destroy">destroy</button>
 
+        <div class="downloads">
+          <a href="#activities" id="download1">summary.csv</a>
+        </div>
+
         <table>
-          <thead>
-            <th>Activity</th>
-            <th>State</th>
-          </thead>
           <tbody id="activities">
           </tbody>
         </table>
 
         <pre id="output"></pre>
 
-        <script type="text/javascript" src="bower_components/d3/d3.min.js"></script>
+        <script type="text/javascript" src="bower_components/FileSaver/FileSaver.min.js"></script>
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
         <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
         <script type="text/javascript">
@@ -84,8 +84,6 @@
             }
 
             if(typeof(idx) !== 'undefined'){
-              // console.log("YESSSS,", idx);
-              // debugger;
               // update only a particular column
               var el = tr.childNodes[idx];
               if(el) el.textContent = data;
@@ -111,7 +109,11 @@
           var elements = new Rows(document.getElementById('activities'));
 
 
-
+          /*
+            can be MASSIVELY simplified
+              * inferring time order from ID (probably bad)
+              * not displaying the full list of activities
+          */
           var db = new Dexie("Runkeeper");
           db.version(1).stores({
             activities: "&uri,total_distance,userID,start_time_norm"
@@ -277,6 +279,53 @@
                 .then(function(){return db.activities.clear()})
                 .then(function(){render()})
             }, false)
+
+            document.getElementById('download1').addEventListener('click', function(e){
+              e.preventDefault();
+
+              console.time('export')
+
+              var keys = ['uri', 'duration', 'type', 'start_time', 'total_distance', 'climb', 'total_calories'];
+              var rows = [keys];
+
+              db
+                .activities
+                .reverse()
+                .each(function(activity){
+                  rows.push(
+                    row(keys, activity)
+                  )
+                })
+                .then(function(){
+                  console.timeEnd('export');
+
+                  var b = new Blob(rows.map(function(row){
+                    return csv(row) + '\n';
+                  }),  {type: 'text/csv'});
+
+                  saveAs(b, 'runkeeper-{{name}}-summary.csv')
+                })
+
+
+            }, false)
+
+
+            // pull out a row of keys
+            function row(keys, obj){
+              return keys.map(function(k){
+                return obj[k]
+              })
+            }
+            // create a csv row from an array
+            function csv(array){
+
+              // this is not a world class csv generator
+              return array.map(function(item){
+                return  typeof(item) === 'string' ?
+                  item.replace(/[\",]/g,'') :
+                  item;
+              }).join(',')
+            }
 
         </script>
       {{/user}}
