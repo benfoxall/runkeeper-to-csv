@@ -55,7 +55,9 @@
         <button id="request">Request (all) </button> <button id="fill">Fill (50)</button> <button id="destroy">destroy</button>
 
         <div class="downloads">
-          <a href="#activities" id="download1">summary.csv</a>
+          <a href="#" id="download1">summary.csv</a>
+          <a href="#" id="download-distances">distances.csv</a>
+          <a href="#" id="download-paths">paths.csv</a>
         </div>
 
         <table>
@@ -304,6 +306,67 @@
                   }),  {type: 'text/csv'});
 
                   saveAs(b, 'runkeeper-{{name}}-summary.csv')
+                })
+
+
+            }, false)
+
+
+
+            document.getElementById('download-distances').addEventListener('click', function(e){
+              e.preventDefault();
+
+              console.time('export distances')
+
+              var data = [new Blob(['uri, timestamp, distance\n'])];
+
+              db
+                .activities
+                .reverse()
+                .each(function(activity){
+                  data.push(
+                    new Blob([activity.distance.map(function(d){
+                      return csv([activity.uri, d.timestamp, d.distance])
+                    }).join('\n') + '\n'])
+                  );
+                })
+                .then(function(){
+                  console.timeEnd('export distances');
+
+                  var b = new Blob(data,  {type: 'text/csv'});
+
+                  saveAs(b, 'runkeeper-{{name}}-distances.csv')
+                })
+
+
+            }, false)
+
+
+
+
+            document.getElementById('download-paths').addEventListener('click', function(e){
+              e.preventDefault();
+
+              console.time('export paths')
+
+              var data = [new Blob(['uri, timestamp, altitude, latitude, longitude\n'])];
+
+              db
+                .activities
+                .reverse()
+                .each(function(activity){
+                  data.push(
+                    new Blob([activity.path.map(function(d){
+                      return csv([activity.uri, d.timestamp, d.altitude, d.latitude, d.longitude])
+                    }).join('\n') + '\n'])
+                  );
+                })
+                .then(function(){
+                  console.timeEnd('export paths');
+
+                  var b = new Blob(data,  {type: 'text/csv'});
+
+                  saveAs(b, 'runkeeper-{{name}}-paths.csv')
                 })
 
 
