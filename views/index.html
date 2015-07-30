@@ -54,11 +54,62 @@
       {{#user}}
         <button id="request">Request (all) </button> <button id="fill">Fill (50)</button> <button id="destroy">destroy</button>
 
+        <table>
+          <thead>
+            <th>Activity</th>
+            <th>State</th>
+          </thead>
+          <tbody id="activities">
+          </tbody>
+        </table>
+
         <pre id="output"></pre>
 
+        <script type="text/javascript" src="bower_components/d3/d3.min.js"></script>
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
         <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
         <script type="text/javascript">
+
+
+          function Rows(el){
+            this.el = el;
+            this._map = {};
+          }
+
+          Rows.prototype.set = function(id, data, idx){
+            var tr = this._map[id];
+
+            if(!this._map[id]){
+              this.el.appendChild(tr = this._map[id] = document.createElement('tr'))
+            }
+
+            if(typeof(idx) !== 'undefined'){
+              // console.log("YESSSS,", idx);
+              // debugger;
+              // update only a particular column
+              var el = tr.childNodes[idx];
+              if(el) el.textContent = data;
+              console.log(el, data)
+              return;
+
+            }
+            // could be more efficient, but whatever
+            while (tr.firstChild) tr.removeChild(tr.firstChild)
+
+            data.forEach(function(item){
+                var td = document.createElement('td');
+                td.textContent = item;
+                tr.appendChild(td);
+            })
+          }
+
+          Rows.prototype.clear = function(){
+            while (this.el.firstChild) this.el.removeChild(this.el.firstChild)
+            this._map = {};
+          }
+
+          var elements = new Rows(document.getElementById('activities'));
+
 
 
           var db = new Dexie("Runkeeper");
@@ -70,27 +121,6 @@
             summaries: "&id, userID, uri, state"
           });
           db.open();
-
-
-
-          // function Activity() {
-          //
-          // }
-          //
-          // function Summary() {
-          //
-          // }
-          //
-          //
-          // db.summaries.mapToClass(Summary, {
-          //   id: String,
-          //   userID: Number,
-          //   uri: String,
-          //   state: String,
-          //   // unindexed
-          //   title: String,
-          // })
-
 
           function populate(url, count) {
 
@@ -122,6 +152,10 @@
 
           // converter things
 
+          function summaryId(item){
+            new Date(item.start_time).getTime() +  '-' + item.uri;
+          }
+
           function indexToSummary(item){
             var start = new Date(item.start_time).getTime();
             return {
@@ -141,21 +175,25 @@
           }
 
 
+          function renderItem(i){
+            elements.set(i.uri, [
+                i.label.type,
+                (i.label.distance/1000).toPrecision(2) + 'km',
+                i.label.start_time,
+                i.uri,
+                i.state
+            ])
+          }
 
 
           function render(){
             console.time('render')
-            var htm = '';
+
             db
               .summaries
               .reverse()
-              .each(function(item, cursor){
-                htm += summaryToHTML(item);
-              })
-              .then(function(){
-                output.innerText = htm;
-                console.timeEnd('render')
-              })
+              .each(renderItem)
+              .then(console.timeEnd.bind(console,'render'))
               .catch(console.error.bind(console));
           }
 
@@ -169,15 +207,16 @@
                 .where('uri')
                 .equals(id)
                 .modify({state: 'requesting'})
-              .then(function(){
+              .then(function(d){
+                elements.set(id, 'requesting', 4)
                 return reqwest('data' + id)
               })
               .then(function(data){
-                console.log(data)
+                elements.set(id, 'success', 4)
                 return db.activities.put(data)
               })
               .then(function(data){
-                db.summaries
+                return db.summaries
                     .where('uri')
                     .equals(id)
                     .modify({state: 'success'})
@@ -189,6 +228,7 @@
                       console.log ("NOT updated " + id);
               })
               .catch(function(r){
+                elements.set(id, 'error', 4)
                 console.log("ERROR", r)
               });
           }
@@ -203,7 +243,7 @@
               .reverse()
               .limit(n)
               .each(function(item, cursor){
-                fill(item.uri).then(render)
+                fill(item.uri);
               })
               .catch(console.error.bind(console));
           }
@@ -219,6 +259,8 @@
                   i.state
                 ].join('\t') + '\n';
             }
+
+
 
 
             document.getElementById('request').addEventListener('click', function(e){
