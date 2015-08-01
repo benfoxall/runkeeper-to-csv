@@ -3,48 +3,135 @@
   <head>
     <meta charset="utf-8">
     <title>Runkeeper to csv</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" type="text/css" href="bower_components/bootstrap/dist/css/bootstrap.css">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style media="screen">
+      .pulse { -webkit-animation: pulse 0.75s infinite alternate; -moz-animation: pulse 0.75s infinite alternate; -o-animation: pulse 0.75s infinite alternate; animation: pulse 0.75s infinite alternate; }
+      @-webkit-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+      @-moz-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+      @-o-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+      @keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+    </style>
+
   </head>
   <body>
+    <a href="https://github.com/benfoxall/runkeeper-to-csv"><img style="position: absolute; top: 0; right: 0; border: 0;" src="gh.png" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"></a>
+
     <div class="container">
-      <header>
+      <div class="page-header">
+        <h1>
+          Runkeeper to csv
+          <small>
+          <a href="#settings" data-toggle="modal" data-target="#settings">
+            <span class="glyphicon glyphicon-cog"></span>
+          </a>
+        </small>
+        </h1>
+      </div>
+      <p class="lead">This fetches data from the <a href="http://developer.runkeeper.com/healthgraph">runkeeper healthgraph api</a> and converts it to csv documents</p>
 
-        {{^user}}
-          <p>
-            <a href="/auth/runkeeper">sign in with runkeeper</a>
-          </p>
-        {{/user}}
-
-        {{#user}}
-          <img class="avatar" src="/picture" width="72" height="72">
-          <h3>
-            {{name}} <small>{{_id}}</small>
-          </h3>
-          <p>
-            <a href="/logout">sign out</a>
-          </p>
-        {{/user}}
-      </header>
+      {{^user}}
+        <p>
+          <a href="/auth/runkeeper" class="btn btn-primary">sign in with runkeeper</a>
+        </p>
+      {{/user}}
 
       {{#user}}
-        <dl>
-          <dt>found</dt> <dd id="ui-found">0</dd>
-          <dt>downloaded</dt> <dd id="ui-downloaded">0</dd>
-        </dl>
 
-        <button id="destroy">clear all data</button>
+        <div class="panel panel-default">
+          <div class="panel-body">
 
-        <div class="downloads">
-          <a href="#" id="download-summary">summary.csv</a>
-          <a href="#" id="download-distances">distances.csv</a>
-          <a href="#" id="download-paths">paths.csv</a>
+            <h3>
+              <img class="img-circle" src="/picture" width="72" height="72" >
+              {{name}}
+              <a class="btn btn-default btn-sm" href="/logout">sign out</a>
+            </h3>
+
+            <hr />
+
+            <h1 id="status">
+              <i class="glyphicon glyphicon-record"></i>
+              <span>-</span>
+            </h1>
+
+            <hr />
+
+            <p class="downloads">
+              <a class="btn btn-default" href="#" id="download-summary">summary.csv</a>
+              <a class="btn btn-default" href="#" id="download-distances">distances.csv</a>
+              <a class="btn btn-default" href="#" id="download-paths">paths.csv</a>
+              <span class="help-block">a partial file can be saved while fetching more data</span>
+            </p>
+
+          </div>
         </div>
+
+        <!-- settings modal -->
+        <div class="modal fade" id="settings">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title"><span class="glyphicon glyphicon-cog"></span></h4>
+              </div>
+              <div class="modal-body">
+                <p class="lead">
+                  Data from the api is stored in your browser to avoid re-downloading data from
+                  the api
+                </p>
+                <div class="form-group">
+                  <button class="btn btn-danger" data-action="clear">clear all data</button>
+                </div>
+                <p>
+                  Note, this data will be removed when you log out
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <script src="bower_components/jquery/dist/jquery.js"></script>
+        <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
 
         <script type="text/javascript" src="bower_components/FileSaver/FileSaver.min.js"></script>
         <script type="text/javascript" src="bower_components/async/dist/async.min.js"></script>
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
         <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
         <script type="text/javascript">
+
+          // the state of the page
+          var paused;
+          var uris = [];
+          var downloaded = [];
+
+          // Update the UI of the page
+          function UI() {
+            var total = uris.length;
+
+            // could be incorrect (mis-matching urls)
+            // though errors more obvious like this
+            var sofar = downloaded.length;
+
+            $('#status span').html(
+              total == sofar ?
+              (total + ' activities') :
+              sofar + '/' + total + ' activities'
+              + (paused ? '<small>paused</small>' : '')
+            )
+
+            $('#status i').attr('class',
+              'glyphicon glyphicon-' + (
+                  sofar < total ? 'download pulse' :
+                  paused ? 'time' : 'ok-circle'
+              )
+            )
+
+            $('.downloads .btn')
+              .toggleClass('btn-default', sofar === 0)
+              .toggleClass('btn-warning', sofar > 0 && sofar < total)
+              .toggleClass('btn-success', sofar > 0 && sofar === total)
+          }
 
           Dexie.Promise.on('error', function(err) {
               console.log("Uncaught error: " + err);
@@ -65,12 +152,9 @@
           });
           db.open();
 
-          var uris = [];
-          var downloaded = [];
-
           db.activities.toCollection().keys(function(keys){
             downloaded = downloaded.concat(keys);
-            document.getElementById('ui-downloaded').textContent = downloaded.length
+            UI();
           })
 
           var q = async.queue(function (uri, callback) {
@@ -81,7 +165,7 @@
                   return populate(uri)
                     .then(function(){
                       downloaded.push(uri);
-                      document.getElementById('ui-downloaded').textContent = downloaded.length
+                      UI();
                     })
               })
               .then(callback)
@@ -105,18 +189,20 @@
 
                 q.push(items);
 
-
-
-                document.getElementById('ui-found').textContent = uris.length
+                UI();
                 if(res.next) populateIndex(res.next);
               })
           }
 
           populateIndex('/fitnessActivities');
 
-          document.getElementById('destroy').addEventListener('click', function(e){
+          // todo - UI update
+          $(document).on('click', '[data-action=clear]', function(){
             db.activities.clear()
-          }, false)
+            .then(function(){
+              window.location.reload()
+            })
+          })
 
           document.getElementById('download-summary').addEventListener('click', function(e){
             e.preventDefault();
@@ -230,6 +316,8 @@
       {{/user}}
 
     </div>
+
+
 
   </body>
 </html>
