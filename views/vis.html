@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Runkeeper to csv</title>
+    <link rel="stylesheet" type="text/css" href="bower_components/bootstrap/dist/css/bootstrap.css">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style media="screen">
+      .pulse { -webkit-animation: pulse 0.75s infinite alternate; -moz-animation: pulse 0.75s infinite alternate; -o-animation: pulse 0.75s infinite alternate; animation: pulse 0.75s infinite alternate; }
+      @-webkit-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+      @-moz-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+      @-o-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+      @keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+
+      canvas{border: 1px dotted #ccc;}
+    </style>
+
+  </head>
+  <body>
+    <a href="https://github.com/benfoxall/runkeeper-to-csv"><img style="position: absolute; top: 0; right: 0; border: 0;" src="gh.png" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"></a>
+
+    <div class="container">
+
+      <div class="page-header">
+        <h1>
+          Visualisation Hacks
+        </h1>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          Canvas Map
+        </div>
+        <div class="panel-body">
+          <canvas id="canvas" width="600" height="300"></canvas>
+          <p>
+            Direct Polar / Equirectangular projection
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+
+    <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
+    <script type="text/javascript">
+
+      Dexie.Promise.on('error', function(err) {
+          console.log("Uncaught error: " + err);
+      });
+
+      var db = new Dexie("Runkeeper");
+      db.version(1).stores({
+        activities: "&uri,total_distance,userID,start_time_norm"
+      });
+      db.version(2).stores({
+        activities: "&uri",
+        summaries: "&id, userID, uri, state"
+      });
+      db.version(3).stores({
+        activities: "&uri"
+      }).upgrade(function(trans){
+        return trans.summaries.clear()
+      });
+      db.open();
+
+      console.time('generate data')
+
+
+      // plonk everything into a big fat array
+      var data; //new Float32Array
+
+      // array of typed arrays
+      var arrays = [];
+
+      // points of interest
+      var pois = []
+
+      db
+        .activities
+        .reverse()
+        .each(function(activity){
+          if(activity.path && activity.path.length){
+
+            var lat_total = 0, lng_total = 0,
+                lat_min = Number.MAX_VALUE, lng_min = Number.MAX_VALUE,
+                lat_max = Number.MIN_VALUE, lng_max = Number.MIN_VALUE;
+
+            var points = new Float32Array(activity.path.length * 2)
+
+            activity.path.forEach(function(p, i){
+              points[i*2]       = p.latitude;
+              points[(i*2) + 1] = p.longitude;
+
+              lat_total += p.latitude;
+              lng_total += p.longitude;
+              lat_min = Math.min(p.latitude, lat_min)
+              lng_min = Math.min(p.longitude, lng_min)
+              lat_max = Math.max(p.latitude, lat_max)
+              lng_max = Math.max(p.longitude, lng_max)
+            })
+
+            arrays.push(points);
+
+            pois.push({
+              lng: lng_total / activity.path.length,
+              lat: lat_total / activity.path.length,
+
+              // a scale that will include both
+              extent: Math.max(
+                lat_max - lat_min,
+                lng_max - lng_min
+              )
+            })
+
+          }
+        })
+        .then(function(){
+
+          data = new Float32Array(arrays.reduce(function(memo, arr){
+            return memo + arr.length;
+          }, 0))
+
+          arrays.reduce(function (idx, arr){
+            data.set(arr, idx);
+            return idx + arr.length;
+          }, 0)
+
+          console.timeEnd('generate data');
+
+          draw();
+
+        })
+
+        // canvas centered at 0,0
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d')
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.fillStyle = 'rgba(1,1,1,0.3)';
+
+
+        // current point of interest
+        var poi;
+
+        var poii = 0;
+
+        canvas.addEventListener('click', function(e){
+          e.preventDefault();
+          poi = pois[poii];
+          poii = (poii + 1) % pois.length;
+          draw();
+        })
+
+        function draw(){
+
+          console.time('draw');
+
+          ctx.clearRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
+
+          for(var i = 0; i < data.length; i+=20){
+            if(poi){
+              ctx.fillRect(
+                (data[i+1] - poi.lng) * 2000,
+                (-data[i]  + poi.lat) * 2000,
+              2, 2);
+            } else {
+              ctx.fillRect(data[i+1],-data[i], 2, 2);
+            }
+            if(window.performance.now() < 0) break;
+          }
+
+          console.timeEnd('draw');
+
+        }
+
+
+    </script>
+  </body>
+</html>
