@@ -7,12 +7,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style media="screen">
-      .pulse { -webkit-animation: pulse 0.75s infinite alternate; -moz-animation: pulse 0.75s infinite alternate; -o-animation: pulse 0.75s infinite alternate; animation: pulse 0.75s infinite alternate; }
-      @-webkit-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
-      @-moz-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
-      @-o-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
-      @keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
-
       canvas{border: 1px dotted #ccc;}
     </style>
 
@@ -81,6 +75,7 @@
       db
         .activities
         .reverse()
+        // .limit(10)
         .each(function(activity){
           if(activity.path && activity.path.length){
 
@@ -138,7 +133,7 @@
         var canvas = document.getElementById('canvas');
         var ctx = canvas.getContext('2d')
         ctx.translate(canvas.width/2, canvas.height/2);
-        ctx.fillStyle = 'rgba(1,1,1,0.3)';
+        ctx.fillStyle = ctx.strokeStyle = 'rgba(1,1,1,0.3)';
 
 
         // current point of interest
@@ -153,11 +148,12 @@
           draw();
         })
 
-        function draw(){
+        function xdraw(){
 
           console.time('draw');
 
           ctx.clearRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
+          ctx.beginPath()
 
           for(var i = 0; i < data.length; i+=20){
             if(poi){
@@ -173,6 +169,40 @@
 
           console.timeEnd('draw');
 
+        }
+
+        function draw(){
+          console.time('draw');
+
+
+
+          ctx.clearRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
+
+          var lng = poi ? function(d){
+            return (d - poi.lng) * 2000
+          } : function(d){
+            return d
+          };
+
+          var lat = poi ? function(d){
+            return (-d + poi.lat) * 2000
+          } : function(d){
+            return -d
+          };
+
+
+          arrays.forEach(function(points){
+            ctx.beginPath()
+            ctx.moveTo(lng(points[1]), lat(points[0]));
+
+            for (var i = 2; i < points.length; i += 2) {
+              ctx.lineTo(lng(points[i+1]),lat(points[i]));
+            }
+
+            ctx.stroke();
+          })
+
+          console.timeEnd('draw');
         }
 
 
