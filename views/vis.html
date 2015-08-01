@@ -50,32 +50,13 @@
     <script src="visjs/canvasMap.js"></script>
 
     <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
+    <script src="db.js"></script>
+
     <script type="text/javascript">
-
-      Dexie.Promise.on('error', function(err) {
-          console.log("Uncaught error: " + err);
-      });
-
-      var db = new Dexie("Runkeeper");
-      db.version(1).stores({
-        activities: "&uri,total_distance,userID,start_time_norm"
-      });
-      db.version(2).stores({
-        activities: "&uri",
-        summaries: "&id, userID, uri, state"
-      });
-      db.version(3).stores({
-        activities: "&uri"
-      }).upgrade(function(trans){
-        return trans.summaries.clear()
-      });
-      db.open();
-
       [].forEach.call(document.querySelectorAll('[data-vis]'), function(el){
         var v = window.vis && window.vis[el.dataset.vis];
         if(v) v();
       });
-
     </script>
   </body>
 </html>
