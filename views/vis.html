@@ -31,6 +31,15 @@
           <p>
             Direct Polar / Equirectangular projection
           </p>
+          <p>
+            My places:
+            <a href="#" data-poi='{"lng": 0, "lat": 0, "scale":1}'>Everywhere</a>
+            <a href="#" data-poi='{"lng":-1.8833,"lat":54.5,"scale":30}'>UK</a>
+            <a href="#" data-poi='{"lng": -1.2322173322475571, "lat": 51.75219395439743, "scale": 100}'>South England</a>
+            <a href="#" data-poi='{"lng": -1.2322173322475571, "lat": 51.75219395439743, "scale": 2000}'>Oxford</a>
+            <a href="#" data-poi='{"lng": -0.1897, "lat":50.8429, "scale":3100}'>Brighton</a>
+            <a href="#" data-poi='{"lng": -116.9667, "lat": 51.3019, "scale": 2000}'>Golden</a>
+          </p>
         </div>
       </div>
     </div>
@@ -158,8 +167,8 @@
           for(var i = 0; i < data.length; i+=20){
             if(poi){
               ctx.fillRect(
-                (data[i+1] - poi.lng) * 2000,
-                (-data[i]  + poi.lat) * 2000,
+                (data[i+1] - poi.lng) * (poi.scale || 2000),
+                (-data[i]  + poi.lat) * (poi.scale || 2000),
               2, 2);
             } else {
               ctx.fillRect(data[i+1],-data[i], 2, 2);
@@ -179,13 +188,13 @@
           ctx.clearRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
 
           var lng = poi ? function(d){
-            return (d - poi.lng) * 2000
+            return (d - poi.lng) * (poi.scale || 2000)
           } : function(d){
             return d
           };
 
           var lat = poi ? function(d){
-            return (-d + poi.lat) * 2000
+            return (-d + poi.lat) * (poi.scale || 2000)
           } : function(d){
             return -d
           };
@@ -205,6 +214,13 @@
           console.timeEnd('draw');
         }
 
+        document.addEventListener('click', function(e){
+          if(e.target.dataset.poi){
+            e.preventDefault();
+            poi = JSON.parse(e.target.dataset.poi);
+            draw();
+          }
+        }, false)
 
     </script>
   </body>
