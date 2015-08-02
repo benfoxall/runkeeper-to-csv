@@ -31,20 +31,29 @@ window.vis.svgs = function(element){
       return activity.path && activity.path.length
     })
 
-    // .limit(40)
+    // .limit(20)
 
     .each(function(activity){
+
+      var totals = [0,0,0];
+
+      var coords = activity.path.map(function(p){
+        totals[0] += p.longitude;
+        totals[1] += p.latitude;
+        totals[2] += Math.round(p.altitude);
+
+        return [p.longitude, p.latitude, Math.round(p.altitude)]
+      });
 
       geo.features.push({
         "type": "Feature",
         "geometry": {
           "type": "LineString",
-          "coordinates": activity.path.map(function(p){
-            return [p.longitude, p.latitude, Math.round(p.altitude)]
-          })
+          "coordinates": coords
           },
         "properties" : {
-          "activity": activity.activity
+          "activity": activity.activity,
+          "centroid": totals.map(function(t){return - t / coords.length})
           }
         })
     })
@@ -61,32 +70,66 @@ window.vis.svgs = function(element){
 
       // var projection = d3.geo.orthographic();
 
-
-      projection.translate([w/2,h/2])
-
-      projection.clipExtent([[0,0],[w,h]])
+      // projection.translate([w/2,h/2])
+      // projection.clipExtent([[0,0],[w,h]])
 
       // oxford
       // projection.scale(250000)
       // projection.center([-1.27, 51.75])
-      projection.rotate([1.27, -51.75])
+      // projection.rotate([1.27, -51.75])
 
 
       var path = d3.geo.path().projection(projection)
 
 
       // var path = d3.geo.path().projection(d3.geo.equirectangular());
+      var colours = d3.scale.category20b();
+
+      var x = d3.scale.linear()
+        .domain([0,geo.features.length])
+        .range([50,w-50])
 
       svg.selectAll("path.activity")
           .data(geo.features)
           .enter()
             .append("path")
             .attr('class', 'activity')
-            .attr('data-x', function(){
-              console.log("-")
+            .attr("d", function(d, i){
+              projection.scale(300000)
+              projection.rotate(d.properties.centroid.slice(0,2))
+              projection.translate([0,0]);
+              // console.log(d.properties.centroid)
+              return path(d);
             })
-            .attr("d", path);
+            .style('stroke', function(d,i){
+              return colours(i)
+            })
+            // .transition()
+            // .delay(function(d,i){
+            //   return i * 200
+            // })
+            .attr('transform', function(d,i){
+                return 'translate('+x(i)+','+h/2+') scale(0.01) rotate(-45)'
+            })
+            //
+            .transition()
+            .delay(function(d,i){
+              return (i * 5) + 1000
+            })
+            .duration(1000)
+            .attr('transform', function(d,i){
+                return 'translate('+x(i)+','+h/2+') scale(1)'
+            })
+            ;
 
+
+
+    svg.append("path")
+      .datum(d3.geo.graticule())
+      .attr("d", path)
+      .attr('class', 'graticule');
+
+/*
 
       svg.append("path")
         .datum(d3.geo.graticule())
@@ -154,6 +197,7 @@ window.vis.svgs = function(element){
       //   svg.selectAll("path")
       //   .attr("d", path)
       // }, 100)
+      */
     })
 
 }
