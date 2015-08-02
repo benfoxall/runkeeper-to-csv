@@ -7,7 +7,20 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style media="screen">
-      canvas{border: 1px dotted #ccc;}
+      canvas,svg{border: 1px dotted #ccc;}
+      .disable {opacity: 0.5}
+      path.activity {
+        stroke-width: 5px;
+        stroke: rgba(255, 150, 0, 0.3);
+        stroke: #f80;
+        stroke-linejoin: round;
+        fill: none;
+      }
+      path.graticule {
+        stroke-width: 1px;
+        stroke: #ccc;
+        fill: none;
+      }
     </style>
 
   </head>
@@ -22,7 +35,16 @@
         </h1>
       </div>
 
-      <div class="panel panel-default" data-vis="canvasMap">
+      <div class="panel panel-default" data-vis="svgs">
+        <div class="panel-heading">
+          Seperate
+        </div>
+        <div class="panel-body">
+        </div>
+      </div>
+
+
+      <div class="panel panel-default disable" data-vis="canvasMap">
         <div class="panel-heading">
           Canvas Map
         </div>
@@ -48,14 +70,17 @@
     <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
 
     <script src="visjs/canvasMap.js"></script>
+    <script src="visjs/svgs.js"></script>
+    <script src="simplify-geojson.bundle.js"></script>
 
     <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
+    <script type="text/javascript" src="bower_components/d3/d3.min.js"></script>
     <script src="db.js"></script>
 
     <script type="text/javascript">
       [].forEach.call(document.querySelectorAll('[data-vis]'), function(el){
         var v = window.vis && window.vis[el.dataset.vis];
-        if(v) v();
+        if(v && !el.classList.contains('disable')) v(el);
       });
     </script>
   </body>
