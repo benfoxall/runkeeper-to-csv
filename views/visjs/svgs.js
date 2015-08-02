@@ -85,6 +85,13 @@ window.vis.svgs = function(element){
       // var path = d3.geo.path().projection(d3.geo.equirectangular());
       var colours = d3.scale.category20b();
 
+
+      var pack = d3.layout.pack();
+      pack.value(function(d){return 1})
+      pack.children(function(d){return d.features})
+      pack.size([w,h])
+      pack(geo);
+
       var x = d3.scale.linear()
         .domain([0,geo.features.length])
         .range([50,w-50])
@@ -109,16 +116,16 @@ window.vis.svgs = function(element){
             //   return i * 200
             // })
             .attr('transform', function(d,i){
-                return 'translate('+x(i)+','+h/2+') scale(0.01) rotate(-45)'
+                return 'translate('+d.x+','+d.y+') scale(0.01) rotate(-45)'
             })
-            //
+
             .transition()
             .delay(function(d,i){
-              return (i * 5) + 1000
+              return (i * 5) + 200
             })
-            .duration(1000)
+            .duration(3500)
             .attr('transform', function(d,i){
-                return 'translate('+x(i)+','+h/2+') scale(1)'
+                return 'translate('+d.x+','+d.y+') scale(.5)'
             })
             ;
 
