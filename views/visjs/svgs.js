@@ -45,15 +45,25 @@ window.vis.svgs = function(element){
         return [p.longitude, p.latitude, Math.round(p.altitude)]
       });
 
+      var bbox = coords.reduce(function(bounds, coord){
+        for (var i = 0; i < coord.length*2; i+=2) {
+          bounds[i]   = bounds[i]   ? Math.min(bounds[i],   coord[i/2]) : coord[i/2];
+          bounds[i+1] = bounds[i+1] ? Math.max(bounds[i+1], coord[i/2]) : coord[i/2];
+        }
+        return bounds;
+      },[])
+
       geo.features.push({
         "type": "Feature",
+        "bbox": bbox,
         "geometry": {
           "type": "LineString",
           "coordinates": coords
           },
         "properties" : {
           "activity": activity.activity,
-          "centroid": totals.map(function(t){return - t / coords.length})
+          "centroid": totals.map(function(t){return - t / coords.length}),
+          "total_distance": activity.total_distance
           }
         })
     })
@@ -78,16 +88,86 @@ window.vis.svgs = function(element){
       // projection.center([-1.27, 51.75])
       // projection.rotate([1.27, -51.75])
 
+      //
+      // group any features with the same bounding box
+      // (could be a geojson function I guess)
+      function bboxIntersect(a, b){
+        // http://gamedev.stackexchange.com/questions/586/
+        return (Math.abs(a[0] - b[0]) * 2 < ((a[1] - a[0]) + (b[1] - b[0]))) &&
+               (Math.abs(a[2] - b[2]) * 2 < ((a[3] - a[2]) + (b[3] - b[2])));
+               // skip 3rd dimension
+      }
+
+      var bbox_centroids = {};
+      var group_idx = 0;
+      for (var i = 0; i < geo.features.length; i++) {
+
+        var test = bboxIntersect.bind(this, geo.features[i].bbox);
+        var found = false;
+
+        for (var j = i-1; j > 0; j--) {
+          if(test(geo.features[j].bbox)){
+            found = geo.features[j];
+            break;
+          }
+        }
+
+        if(found){
+          // console.log("found", i, j, found.properties.bbox_group);
+          geo.features[i].properties.bbox_group = found.properties.bbox_group;
+
+          bbox_centroids[found.properties.bbox_group].push(
+            geo.features[i].properties.centroid
+          )
+        } else {
+          // console.log("not found", i, group_idx);
+          geo.features[i].properties.bbox_group = group_idx;
+          bbox_centroids[group_idx] = [geo.features[i].properties.centroid];
+
+          group_idx++;
+        }
+      }
+      console.log("found ", group_idx, " bbox intersections")
+
+      var bbox_groups = {
+        children:[]
+      }
+
+      for (var i = 0; i < group_idx; i++) {
+        bbox_groups.children.push({
+          id: i,
+          centroid: bbox_centroids[i] // TODO - average all centroids
+        });
+      }
+
+      window.bbox_groups = bbox_groups;
+
+      var keyed_bbox_groups =
+      d3.layout.pack()
+        .value(function(){return 1})
+        .size([w,h])
+        (bbox_groups)
+        .reduce(function(memo, bbox){
+          memo[bbox.id] = bbox;
+          return memo;
+        },[])
+
+      // console.table(keyed_bbox_groups)
+
+
 
       var path = d3.geo.path().projection(projection)
 
 
       // var path = d3.geo.path().projection(d3.geo.equirectangular());
       var colours = d3.scale.category20b();
+      var colours = d3.scale.category10();
 
 
+      // this screws up the geojson by adding `children` to all the features,
+      // but it looks cool
       var pack = d3.layout.pack();
-      pack.value(function(d){return 1})
+      pack.value(function(d){return d.properties.total_distance})
       pack.children(function(d){return d.features})
       pack.size([w,h])
       pack(geo);
@@ -109,7 +189,8 @@ window.vis.svgs = function(element){
               return path(d);
             })
             .style('stroke', function(d,i){
-              return colours(i)
+              // console.log(d)
+              return colours(d.properties.bbox_group)
             })
             // .transition()
             // .delay(function(d,i){
@@ -127,14 +208,35 @@ window.vis.svgs = function(element){
             .attr('transform', function(d,i){
                 return 'translate('+d.x+','+d.y+') scale(.5)'
             })
+            .attr('transform', function(d,i){
+                var g = keyed_bbox_groups[d.properties.bbox_group];
+                return 'translate('+g.x+','+g.y+') scale(.5)'
+            })
+
+
+            .transition()
+            .delay(function(d,i){
+              return (i * 5) + 4500
+            })
+            .duration(3500)
+
+            .attr("d", function(d, i){
+              var g = keyed_bbox_groups[d.properties.bbox_group];
+              projection.scale(300000)
+              projection.rotate(g.centroid[0].slice(0,2))
+              projection.translate([0,0]);
+              return path(d);
+            })
+
+
             ;
 
 
 
-    svg.append("path")
-      .datum(d3.geo.graticule())
-      .attr("d", path)
-      .attr('class', 'graticule');
+    // svg.append("path")
+    //   .datum(d3.geo.graticule())
+    //   .attr("d", path)
+    //   .attr('class', 'graticule');
 
 /*
 
