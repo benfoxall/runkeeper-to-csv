@@ -78,3 +78,19 @@ geo.group = function(boxes) {
   })
 
 }
+
+
+geo.expand = function(box, expansion) {
+  var expanded = box.slice(0);
+
+  var size, mid;
+  for (var i = 0; i < box.length; i += 2) {
+    mid  = (box[i+1] + box[i]) / 2
+    size = (box[i+1] - box[i]) * expansion * .5
+
+    expanded[i]   = mid - size;
+    expanded[i+1] = mid + size;
+  }
+
+  return expanded;
+}

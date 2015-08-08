@@ -183,4 +183,29 @@ describe('geo functions', function(){
 
   })
 
+  describe('expand', function(){
+
+    it("is defined", function(){
+      geo.expand.should.be.a.Function
+    })
+
+    it('expands', function(){
+      geo.expand([-1, 1, -1, 1], 2)
+        .should
+        .eql([-2, 2, -2, 2])
+    })
+
+    it('contracts', function(){
+      geo.expand([-1, 1, -1, 1], .5)
+        .should
+        .eql([-.5, .5, -.5, .5])
+    })
+
+    it('deals with non 0,0 origins', function(){
+      geo.expand([20, 21, 20, 21], 3)
+        .should
+        .eql([19, 22, 19, 22])
+    })
+  })
+
 })
