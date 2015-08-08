@@ -1,8 +1,8 @@
-var geo = {};
+var geofn = {};
 
 // find the bounds of a set of coords
 // [[1,20,0],[2,23,0], [3,22,10]] => [1,3,20,23,0,10]
-geo.bounds = function(coords){
+geofn.bounds = function(coords){
   var bounds = [], coord, v;
   for (var i = 0; i < coords.length; i++) {
     coord = coords[i];
@@ -25,7 +25,7 @@ geo.bounds = function(coords){
 
 
 // do two bounding boxes intersect?
-geo.intersects = function(a, b){
+geofn.intersects = function(a, b){
   // http://gamedev.stackexchange.com/questions/586/
   return (Math.abs(a[0] - b[0]) * 2 < ((a[1] - a[0]) + (b[1] - b[0]))) &&
          (Math.abs(a[2] - b[2]) * 2 < ((a[3] - a[2]) + (b[3] - b[2])));
@@ -33,7 +33,7 @@ geo.intersects = function(a, b){
 }
 
 // merging bounding boxes
-geo.merge = function(a, b){
+geofn.merge = function(a, b){
   if(a.length !== b.length) throw new Error("can't merge boxes of different length")
 
   var merged = new Array(a.length);
@@ -44,7 +44,7 @@ geo.merge = function(a, b){
 }
 
 
-geo.group = function(boxes) {
+geofn.group = function(boxes) {
   var groups = boxes.map(function(box){
     return box.slice(0)
   })
@@ -58,8 +58,8 @@ geo.group = function(boxes) {
       // if a group intersects any group before it,
       // merge it in and remove this one
       for (var j = i-1; j >= 0; j--) {
-        if(geo.intersects(groups[i], groups[j])){
-          groups[j] = geo.merge(groups[i], groups[j])
+        if(geofn.intersects(groups[i], groups[j])){
+          groups[j] = geofn.merge(groups[i], groups[j])
           groups.splice(i, 1);
           merged = true;
           break;
@@ -71,7 +71,7 @@ geo.group = function(boxes) {
   // map the boxes into the group they intersect with
   return boxes.map(function(box){
     for (var i = 0; i < groups.length; i++) {
-      if(geo.intersects(box, groups[i]))
+      if(geofn.intersects(box, groups[i]))
       return i;
     }
     throw new Error("couldn't find box intersection")
@@ -80,7 +80,7 @@ geo.group = function(boxes) {
 }
 
 
-geo.expand = function(box, expansion) {
+geofn.expand = function(box, expansion) {
   var expanded = box.slice(0);
 
   var size, mid;
@@ -95,7 +95,7 @@ geo.expand = function(box, expansion) {
   return expanded;
 }
 
-geo.centroid = function(coords) {
+geofn.centroid = function(coords) {
   var totals = coords[0].map(function(){return 0}),
       coord;
   for (var i = 0; i < coords.length; i++) {
