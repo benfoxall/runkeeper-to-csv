@@ -94,3 +94,19 @@ geo.expand = function(box, expansion) {
 
   return expanded;
 }
+
+geo.centroid = function(coords) {
+  var totals = coords[0].map(function(){return 0}),
+      coord;
+  for (var i = 0; i < coords.length; i++) {
+    coord = coords[i]
+
+    for (var j = 0; j < coords[i].length; j++) {
+      totals[j] += coords[i][j];
+    }
+  }
+
+  return totals.map(function(t){
+    return t/coords.length;
+  })
+}

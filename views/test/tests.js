@@ -208,4 +208,26 @@ describe('geo functions', function(){
     })
   })
 
+
+  describe('centroid', function(){
+
+    it("is defined", function(){
+      geo.centroid.should.be.a.Function
+    })
+
+    it('works for single items', function(){
+      geo.centroid([[1],[2],[3]])
+        .should
+        .eql([2])
+    })
+
+    it('works for more items', function(){
+      geo.centroid([[1,10],[2,20],[3,15]])
+        .should
+        .eql([2,15])
+    })
+
+  })
+
+
 })
