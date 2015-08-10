@@ -1,3 +1,4 @@
+
 window.vis = window.vis || {};
 
 window.vis.svgs = function(element){
@@ -35,34 +36,20 @@ window.vis.svgs = function(element){
 
     .each(function(activity){
 
-      var totals = [0,0,0];
-
       var coords = activity.path.map(function(p){
-        totals[0] += p.longitude;
-        totals[1] += p.latitude;
-        totals[2] += Math.round(p.altitude);
-
         return [p.longitude, p.latitude, Math.round(p.altitude)]
       });
 
-      var bbox = coords.reduce(function(bounds, coord){
-        for (var i = 0; i < coord.length*2; i+=2) {
-          bounds[i]   = bounds[i]   ? Math.min(bounds[i],   coord[i/2]) : coord[i/2];
-          bounds[i+1] = bounds[i+1] ? Math.max(bounds[i+1], coord[i/2]) : coord[i/2];
-        }
-        return bounds;
-      },[])
-
       geo.features.push({
         "type": "Feature",
-        "bbox": bbox,
+        "bbox": geofn.bounds(coords),
         "geometry": {
           "type": "LineString",
           "coordinates": coords
           },
         "properties" : {
           "activity": activity.activity,
-          "centroid": totals.map(function(t){return - t / coords.length}),
+          "centroid": geofn.centroid(coords),
           "total_distance": activity.total_distance
           }
         })
@@ -76,58 +63,24 @@ window.vis.svgs = function(element){
       // roughly 80% reduction for my data
       simplify(geo, 0.0001, true);
 
-      var projection = d3.geo.equirectangular();
+      var boxes = geo.features.map(function(f){
+        return f.bbox
+      });
 
-      // var projection = d3.geo.orthographic();
+      var gs = geofn.group(boxes)
 
-      // projection.translate([w/2,h/2])
-      // projection.clipExtent([[0,0],[w,h]])
+      console.log("found %d groups", Math.max.apply(Math, gs));
 
-      // oxford
-      // projection.scale(250000)
-      // projection.center([-1.27, 51.75])
-      // projection.rotate([1.27, -51.75])
+      var bbox_centroids = window.bbox_centroids = {};
 
-      //
-      // group any features with the same bounding box
-      // (could be a geojson function I guess)
-      function bboxIntersect(a, b){
-        // http://gamedev.stackexchange.com/questions/586/
-        return (Math.abs(a[0] - b[0]) * 2 < ((a[1] - a[0]) + (b[1] - b[0]))) &&
-               (Math.abs(a[2] - b[2]) * 2 < ((a[3] - a[2]) + (b[3] - b[2])));
-               // skip 3rd dimension
-      }
+      geo.features.forEach(function(feature, i){
+        feature.properties.bbox_group = gs[i];
 
-      var bbox_centroids = {};
-      var group_idx = 0;
-      for (var i = 0; i < geo.features.length; i++) {
+        (bbox_centroids[gs[i]] = bbox_centroids[gs[i]] || [])
+          .push(feature.properties.centroid)
+      })
 
-        var test = bboxIntersect.bind(this, geo.features[i].bbox);
-        var found = false;
-
-        for (var j = i-1; j > 0; j--) {
-          if(test(geo.features[j].bbox)){
-            found = geo.features[j];
-            break;
-          }
-        }
-
-        if(found){
-          // console.log("found", i, j, found.properties.bbox_group);
-          geo.features[i].properties.bbox_group = found.properties.bbox_group;
-
-          bbox_centroids[found.properties.bbox_group].push(
-            geo.features[i].properties.centroid
-          )
-        } else {
-          // console.log("not found", i, group_idx);
-          geo.features[i].properties.bbox_group = group_idx;
-          bbox_centroids[group_idx] = [geo.features[i].properties.centroid];
-
-          group_idx++;
-        }
-      }
-      console.log("found ", group_idx, " bbox intersections")
+      var group_idx = Math.max.apply(Math, gs) + 1;
 
       var bbox_groups = {
         children:[]
@@ -140,9 +93,14 @@ window.vis.svgs = function(element){
         });
       }
 
-      window.bbox_groups = bbox_groups;
 
-      var keyed_bbox_groups =
+      var boxes = geo.features.map(function(f){
+        return f.bbox
+      });
+
+      var gs = geofn.group(boxes)
+
+      var keyed_bbox_groups = window.keyed_bbox_groups =
       d3.layout.pack()
         .value(function(){return 1})
         .size([w,h])
@@ -154,8 +112,7 @@ window.vis.svgs = function(element){
 
       // console.table(keyed_bbox_groups)
 
-
-
+      var projection = d3.geo.equirectangular();
       var path = d3.geo.path().projection(projection)
 
 
@@ -183,9 +140,12 @@ window.vis.svgs = function(element){
             .attr('class', 'activity')
             .attr("d", function(d, i){
               projection.scale(300000)
-              projection.rotate(d.properties.centroid.slice(0,2))
+              projection.rotate(
+                d.properties
+                 .centroid.slice(0,2)
+                 .map(function(d){return d*-1})
+              )
               projection.translate([0,0]);
-              // console.log(d.properties.centroid)
               return path(d);
             })
             .style('stroke', function(d,i){
@@ -206,9 +166,6 @@ window.vis.svgs = function(element){
             })
             .duration(3500)
             .attr('transform', function(d,i){
-                return 'translate('+d.x+','+d.y+') scale(.5)'
-            })
-            .attr('transform', function(d,i){
                 var g = keyed_bbox_groups[d.properties.bbox_group];
                 return 'translate('+g.x+','+g.y+') scale(.5)'
             })
@@ -222,12 +179,14 @@ window.vis.svgs = function(element){
 
             .attr("d", function(d, i){
               var g = keyed_bbox_groups[d.properties.bbox_group];
-              projection.scale(300000)
-              projection.rotate(g.centroid[0].slice(0,2))
+              projection.rotate(
+                g.centroid[0]
+                 .slice(0,2)
+                 .map(function(d){return d*-1})
+              )
               projection.translate([0,0]);
               return path(d);
             })
-
 
             ;
 
