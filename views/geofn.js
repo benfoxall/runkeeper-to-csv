@@ -27,13 +27,10 @@ geofn.bounds = function(coords){
 // do two bounding boxes intersect?
 geofn.intersects = function(a, b){
   // http://gamemath.com/2011/09/detecting-whether-two-boxes-overlap/
-
-  if(a[1] < b[0]) return false
-  if(a[0] > b[1]) return false
-
-  if(a[3] < b[2]) return false
-  if(a[2] > b[3]) return false
-
+  for (var i = 0; i < a.length; i+=2) {
+    if(a[i+1] < b[i]  ) return false
+    if(a[i]   > b[i+1]) return false
+  }
   return true
 }
 
