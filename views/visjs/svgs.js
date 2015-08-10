@@ -100,13 +100,20 @@ window.vis.svgs = function(element){
       })
 
 
-      // this screws up the geojson by adding `children` to all the features,
-      // but it looks cool
-      var pack = d3.layout.pack();
-      pack.value(function(d){return d.properties.total_distance})
-      pack.children(function(d){return d.features})
-      pack.size([w,h])
-      pack(geo);
+
+      var layout = {
+        children: d3.range(geo.features.length).map(function(){return {}})
+      }
+
+      d3.layout.pack()
+        .value(function(d, i){return geo.features[i].properties.total_distance})
+        .value(function(){return 1})
+        .size([w,h])
+        (layout)
+
+      geo.features.forEach(function(feature,i){
+        feature.properties.layout = layout.children[i]
+      })
 
 
       var projection = d3.geo.equirectangular()
@@ -139,7 +146,8 @@ window.vis.svgs = function(element){
               return colours(d.properties.group.id)
             })
             .attr('transform', function(d,i){
-                return 'translate('+d.x+','+d.y+') scale(0.5) rotate(-45)'
+                var l = d.properties.layout;
+                return 'translate('+l.x+','+l.y+') scale(0.5) rotate(-45)'
             })
 
             // group together
