@@ -49,24 +49,21 @@ geofn.group = function(boxes) {
     return box.slice(0)
   })
 
-  var merged;
-  do {
-    merged = false;
+  for (var i = groups.length-1; i >= 0; i--) {
 
-    for (var i = 0; i < groups.length; i++) {
+    // if a group intersects any group before it,
+    // merge it in and remove this one
+    for (var j = i-1; j >= 0; j--) {
+      if(geofn.intersects(groups[i], groups[j])){
 
-      // if a group intersects any group before it,
-      // merge it in and remove this one
-      for (var j = i-1; j >= 0; j--) {
-        if(geofn.intersects(groups[i], groups[j])){
-          groups[j] = geofn.merge(groups[i], groups[j])
-          groups.splice(i, 1);
-          merged = true;
-          break;
-        }
+        groups[j] = geofn.merge(groups[i], groups[j]);
+
+        groups.splice(i, 1);
+
+        break;
       }
     }
-  } while (merged);
+  }
 
   // map the boxes into the group they intersect with
   return boxes.map(function(box){
