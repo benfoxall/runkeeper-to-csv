@@ -64,18 +64,6 @@ window.vis.svgs = function(element){
                       return f.bbox
                     }))
 
-
-      // work out which group each feature belongs to
-      geo.features.forEach(function(feature, i){
-        for (var i = 0; i < groups.length; i++) {
-          if(geofn.intersects(feature.bbox, groups[i])){
-            feature.properties.bbox_group = i;
-            break;
-          }
-        }
-      })
-
-
       // group together by intersecting bounding box
       var group_layout = {
         children:
@@ -84,21 +72,32 @@ window.vis.svgs = function(element){
             return {
               id:i,
               bbox: bound,
-              centre: geofn.centre(bound)
+              centroids: []
             }
           })
       }
 
-      var keyed_bbox_groups =
-          d3.layout.pack()
-            .value(function(){return 1})
-            .size([w,h])
-            (group_layout)
-            .reduce(function(memo, bbox){
-              memo[bbox.id] = bbox;
-              return memo;
-            },[])
+      d3.layout.pack()
+        .value(function(){return 1})
+        .size([w,h])
+        (group_layout)
 
+
+      // assign groups to features
+      geo.features.forEach(function(feature, i){
+        for (var i = 0; i < groups.length; i++) {
+          if(geofn.intersects(feature.bbox, groups[i])){
+            feature.properties.group = group_layout.children[i];
+            group_layout.children[i].centroids.push(feature.properties.centroid);
+            break;
+          }
+        }
+      })
+
+      group_layout.children.forEach(function(group){
+        group.centroid = d3.transpose(group.centroids)
+                           .map(function(d){return d3.mean(d)})
+      })
 
 
       // this screws up the geojson by adding `children` to all the features,
@@ -137,7 +136,7 @@ window.vis.svgs = function(element){
               return path(d);
             })
             .style('stroke', function(d,i){
-              return colours(d.properties.bbox_group)
+              return colours(d.properties.group.id)
             })
             .attr('transform', function(d,i){
                 return 'translate('+d.x+','+d.y+') scale(0.5) rotate(-45)'
@@ -150,7 +149,7 @@ window.vis.svgs = function(element){
             })
             .duration(3500)
             .attr('transform', function(d,i){
-                var g = keyed_bbox_groups[d.properties.bbox_group];
+                var g = d.properties.group;
                 return 'translate('+g.x+','+g.y+') scale(.5)'
             })
 
@@ -162,10 +161,10 @@ window.vis.svgs = function(element){
             .duration(3500)
 
             .attr("d", function(d, i){
-              var g = keyed_bbox_groups[d.properties.bbox_group];
+              var g = d.properties.group;
               path.projection()
                 .rotate(
-                  g.centre
+                  g.centroid
                    .slice(0,2)
                    .map(function(d){return d*-1})
                 )
