@@ -179,7 +179,24 @@ window.vis.svgs = function(element){
               return path(d);
             })
 
-            ;
+
+      svg.selectAll('circle.choice')
+        .data(group_layout.children)
+        .enter()
+        .append('circle')
+        .attr('class','choice')
+        .attr('r', 0)
+        .on('click', function(d){
+          console.log(d)
+          window.location.hash = 'box=' + d.bbox.join(',')
+        })
+        .transition()
+        .delay(function(d,i){return 5000 + i*100})
+        .duration(2000)
+        .attr('r',  function(d){return d.r})
+        .attr('cx', function(d){return d.x})
+        .attr('cy', function(d){return d.y})
+
 
     })
 
