@@ -59,53 +59,46 @@ window.vis.svgs = function(element){
       // roughly 80% reduction for my data
       simplify(geo, 0.0001, true);
 
-      var boxes = geo.features.map(function(f){
-        return f.bbox
-      });
+      var groups = geofn
+                    .group_bounds(geo.features.map(function(f){
+                      return f.bbox
+                    }))
 
-      var gs = geofn.group(boxes)
 
-      console.log("found %d groups", Math.max.apply(Math, gs));
-
-      var bbox_centroids = {};
-
+      // work out which group each feature belongs to
       geo.features.forEach(function(feature, i){
-        feature.properties.bbox_group = gs[i];
-
-        (bbox_centroids[gs[i]] = bbox_centroids[gs[i]] || [])
-          .push(feature.properties.centroid)
+        for (var i = 0; i < groups.length; i++) {
+          if(geofn.intersects(feature.bbox, groups[i])){
+            feature.properties.bbox_group = i;
+            break;
+          }
+        }
       })
 
-      var group_idx = Math.max.apply(Math, gs) + 1;
 
-      var bbox_groups = {
-        children:[]
-      }
-
-      for (var i = 0; i < group_idx; i++) {
-        bbox_groups.children.push({
-          id: i,
-          centroid: bbox_centroids[i] // TODO - average all centroids
-        });
+      // group together by intersecting bounding box
+      var group_layout = {
+        children:
+          groups
+          .map(function(bound, i) {
+            return {
+              id:i,
+              bbox: bound,
+              centre: geofn.centre(bound)
+            }
+          })
       }
 
       var keyed_bbox_groups =
-      d3.layout.pack()
-        .value(function(){return 1})
-        .size([w,h])
-        (bbox_groups)
-        .reduce(function(memo, bbox){
-          memo[bbox.id] = bbox;
-          return memo;
-        },[])
+          d3.layout.pack()
+            .value(function(){return 1})
+            .size([w,h])
+            (group_layout)
+            .reduce(function(memo, bbox){
+              memo[bbox.id] = bbox;
+              return memo;
+            },[])
 
-      var projection = d3.geo.equirectangular()
-                          .translate([0,0])
-                          .scale(300000);
-      var path = d3.geo.path().projection(projection)
-
-
-      var colours = d3.scale.category20();
 
 
       // this screws up the geojson by adding `children` to all the features,
@@ -115,6 +108,15 @@ window.vis.svgs = function(element){
       pack.children(function(d){return d.features})
       pack.size([w,h])
       pack(geo);
+
+
+      var projection = d3.geo.equirectangular()
+                          .translate([0,0])
+                          .scale(300000);
+
+      var path = d3.geo.path().projection(projection)
+
+      var colours = d3.scale.category20();
 
       var x = d3.scale.linear()
         .domain([0,geo.features.length])
@@ -161,10 +163,9 @@ window.vis.svgs = function(element){
 
             .attr("d", function(d, i){
               var g = keyed_bbox_groups[d.properties.bbox_group];
-
               path.projection()
                 .rotate(
-                  g.centroid[0]
+                  g.centre
                    .slice(0,2)
                    .map(function(d){return d*-1})
                 )

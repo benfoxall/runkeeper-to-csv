@@ -45,8 +45,15 @@ geofn.merge = function(a, b){
   return merged;
 }
 
+geofn.centre = function(box){
+  var c = [];
+  for (var i = 0; i < box.length; i+=2) {
+    c[i/2] = (box[i] + box[i+1]) / 2
+  }
+  return c;
+}
 
-geofn.group = function(boxes) {
+geofn.group_bounds = function(boxes) {
   var groups = boxes.map(function(box){
     return box.slice(0)
   })
@@ -66,6 +73,12 @@ geofn.group = function(boxes) {
       }
     }
   }
+  return groups;
+}
+
+
+geofn.group = function(boxes) {
+  var groups = geofn.group_bounds(boxes);
 
   // map the boxes into the group they intersect with
   return boxes.map(function(box){
