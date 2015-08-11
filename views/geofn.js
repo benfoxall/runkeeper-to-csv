@@ -122,3 +122,42 @@ geofn.centroid = function(coords) {
     return t/coords.length;
   })
 }
+
+
+geofn.cartesian = function(position) {
+  var lng = position[0], lat = position[1]
+	var rho = 6371000;
+	var phi = (lat + 90) * (Math.PI/180);
+	var theta = (lng + 90) * (Math.PI/180);
+
+	var x = rho * Math.sin(phi) * Math.cos(theta);
+	var y = rho * Math.sin(phi) * Math.sin(theta);
+	var z = rho * Math.cos(phi);
+
+  return [x,y,z];
+  //
+	// return {
+	// 	v: $V([x,y,z]),
+	// 	v2: $V([x,y,z]).x(1.02 + (point.count/6000)),
+	// 	count: point.count
+	// };
+	// });
+}
+
+geofn.contains = function(box, point){
+  for (var i = 0; i < point.length && i < box.length/2; i++) {
+    if(
+      (point[i] < box[i*2])
+    ){
+      return false
+    }
+
+    if(
+      (point[i] > box[i*2 + 1])
+    ){
+      // console.log("GT", point[i], box[i*2 + 1])
+      return false
+    }
+  }
+  return true;
+}

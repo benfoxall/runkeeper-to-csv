@@ -5,13 +5,6 @@ window.vis.svgs = function(element){
 
   var simplify = require('simplify-geojson')
 
-  console.log("SVGS");
-
-  var line = d3.svg.line()
-    .x(function(d) { return d.x; })
-    .y(function(d) { return d.y; })
-    .interpolate("basis");
-
   var w = 600, h = 600;
   var svg = d3.select(element)
     .select('.panel-body')
@@ -24,6 +17,7 @@ window.vis.svgs = function(element){
     type: "FeatureCollection",
     features: []
   }
+  var __t;
 
   db
     .activities
@@ -35,6 +29,7 @@ window.vis.svgs = function(element){
     // .limit(20)
 
     .each(function(activity){
+      if(!__t) console.time("requesting")
 
       var coords = activity.path.map(function(p){
         return [p.longitude, p.latitude, Math.round(p.altitude)]
@@ -55,6 +50,8 @@ window.vis.svgs = function(element){
         })
     })
     .then(function(){
+
+      console.timeEnd("requesting")
 
       // roughly 80% reduction for my data
       simplify(geo, 0.0001, true);
@@ -191,7 +188,7 @@ window.vis.svgs = function(element){
           window.location.hash = 'box=' + d.bbox.join(',')
         })
         .transition()
-        .delay(function(d,i){return 5000 + i*100})
+        .delay(function(d,i){return 7000 + i*100})
         .duration(2000)
         .attr('r',  function(d){return d.r})
         .attr('cx', function(d){return d.x})

@@ -43,16 +43,27 @@
         </h1>
       </div>
 
-      <div class="panel panel-default" data-vis="svgs">
+      <div class="panel panel-default disable" data-vis="svgs">
         <div class="panel-heading">
-          Seperate
+          Clustering
+        </div>
+        <div class="panel-body">
+        </div>
+      </div>
+
+      <div class="panel panel-default" data-vis="webgl3d">
+        <div class="panel-heading">
+          WebGL
         </div>
         <div class="panel-body">
         </div>
       </div>
 
 
-      <div class="panel panel-default x-disable" data-vis="canvasMap">
+      location.hash.match('box=(.*)$')
+
+
+      <div class="panel panel-default disable" data-vis="canvasMap">
         <div class="panel-heading">
           Canvas Map
         </div>
@@ -74,14 +85,21 @@
       </div>
     </div>
 
+    <!-- <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true"></script> -->
+
+
     <script src="bower_components/jquery/dist/jquery.js"></script>
     <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
-    
+
+    <script src="bower_components/threejs/build/three.js"></script>
+    <script src="three.orbit.js"></script>
+
     <script src="geofn.js"></script>
+    <script src="simplify-geojson.bundle.js"></script>
 
     <script src="visjs/canvasMap.js"></script>
     <script src="visjs/svgs.js"></script>
-    <script src="simplify-geojson.bundle.js"></script>
+    <script src="visjs/webgl3d.js"></script>
 
     <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
     <script type="text/javascript" src="bower_components/d3/d3.min.js"></script>
