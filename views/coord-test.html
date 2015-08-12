@@ -29,16 +29,58 @@
 
     camera.position.z = 4;
 
+    controls = new THREE.OrbitControls( camera );
+    controls.damping = 0.2;
+
+
+    var lat = (Math.random() * 180) - 90
+    var lng = (Math.random() * 360);
+
+
+    var geometry = new THREE.SphereGeometry( .1, 8, 8 );
+    var material = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true, transparent: true, opacity: 0.2 } );
+    var point = new THREE.Mesh( geometry, material );
+    point.position.set.apply(point.position, sphericalToCartesian(lng, lat))
+
+    sphere.add( point );
+
     var render = function () {
       requestAnimationFrame( render );
 
-      sphere.rotation.x += 0.01;
-      sphere.rotation.y += 0.01;
+      lat += Math.random() * 0.5;
+      lng += Math.random() * 0.5;
+      point.position.set.apply(point.position, sphericalToCartesian(lng, lat))
+
+      // TODO Adjust sphere rotation so that point is consistent
+      // sphere.rotation.x += 0.01;
+      // sphere.rotation.y += 0.01;
 
       renderer.render(scene, camera);
     };
 
     render();
+
+
+    function sphericalToCartesian (lat, lng){
+      var rho = 1;
+
+      var phi = (lat + 90) * (Math.PI/180);
+      var theta = (lng) * (Math.PI/180);
+
+      var x = rho * Math.sin(phi) * Math.cos(theta);
+      var y = rho * Math.sin(phi) * Math.sin(theta);
+      var z = rho * Math.cos(phi);
+
+      return [x,y,z]
+    }
+
+
+
+    // This is why we're doing this
+    controls.target = new THREE.Vector3(0,1,0)
+    camera.lookAt(new THREE.Vector3(0,1,0))
+
+
     </script>
   </body>
 </html>
