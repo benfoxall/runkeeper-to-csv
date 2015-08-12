@@ -127,8 +127,12 @@ geofn.centroid = function(coords) {
 geofn.cartesian = function(position) {
   var lng = position[0], lat = position[1]
 	var rho = 6371000;
+
+  lat = lng = 0;
+
+  lat = 20;
 	var phi = (lat + 90) * (Math.PI/180);
-	var theta = (lng + 90) * (Math.PI/180);
+	var theta = (lng) * (Math.PI/180);
 
 	var x = rho * Math.sin(phi) * Math.cos(theta);
 	var y = rho * Math.sin(phi) * Math.sin(theta);
