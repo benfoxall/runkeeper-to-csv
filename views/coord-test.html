@@ -15,7 +15,7 @@
 
     <script type="text/javascript">
     var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.00001, 1000 );
 
     var renderer = new THREE.WebGLRenderer();
     renderer.setClearColor( 0xeeeeee );
@@ -37,7 +37,7 @@
     var lng = (Math.random() * 360);
 
 
-    var geometry = new THREE.SphereGeometry( .1, 8, 8 );
+    var geometry = new THREE.SphereGeometry( .1, 16, 16 );
     var material = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true, transparent: true, opacity: 0.2 } );
     var point = new THREE.Mesh( geometry, material );
     point.position.set.apply(point.position, sphericalToCartesian(lng, lat))
@@ -49,11 +49,10 @@
 
       lat += Math.random() * 0.5;
       lng += Math.random() * 0.5;
+
       point.position.set.apply(point.position, sphericalToCartesian(lng, lat))
 
-      // TODO Adjust sphere rotation so that point is consistent
-      // sphere.rotation.x += 0.01;
-      // sphere.rotation.y += 0.01;
+      sphere.quaternion.setFromUnitVectors(point.position, new THREE.Vector3(0,1,0))
 
       renderer.render(scene, camera);
     };
