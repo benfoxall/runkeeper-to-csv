@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Runkeeper to csv</title>
+    <link rel="stylesheet" type="text/css" href="bower_components/bootstrap/dist/css/bootstrap.css">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-header">
+        <h1>
+          Service worker test
+        </h1>
+      </div>
+
+      <h2>iframe href="/sw-data/iframe"</h2>
+      <iframe src="/sw-data/iframe"></iframe>
+
+      <h2>fetch("/sw-data/ajax")</h2>
+      <p id="responseElement">--</p>
+
+      <h2>img src="/sw-data/img"</h2>
+      <img src="/sw-data/img" />
+
+    </div>
+
+    <script type="text/javascript">
+    if ('serviceWorker' in navigator) {
+      navigator
+        .serviceWorker
+        .register('/sw-data/sw.js', { scope: '/sw-data/' })
+        .then(function(reg) {
+          // registration worked
+          console.log('Registration succeeded. Scope is ' + reg.scope);
+
+          fetch("/sw-data/ajax")
+          .then(function(resp){
+            return resp.text()
+          })
+          .then(function(text){
+            responseElement.innerText = ">>> " + text
+          })
+          .catch(function(err){
+            console.log(err)
+          })
+
+
+          httpRequest = new XMLHttpRequest();
+          httpRequest.onreadystatechange = function(){
+            // process the server response
+            console.log("READY")
+          };
+          httpRequest.open('GET', '/sw-data/xhr', true);
+          httpRequest.send(null);
+
+        })
+        .catch(function(error) {
+          // registration failed
+          console.log('Registration failed with ' + error);
+        });
+    };
+  </script>
+  </body>
+</html>
