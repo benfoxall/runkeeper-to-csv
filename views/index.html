@@ -117,33 +117,24 @@
             location.protocol = 'https:';
           }
 
+          var worker = new Worker("worker.js");
+
+          worker.onmessage = function(event) {
+            console.log(">>>", event.data);
+            if(event.data.tasks){
+              document.getElementById('done').innerText = Math.max(of - event.data.tasks,0)
+            }
+          };
 
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').then(function(registration) {
-              // Registration was successful
-              window.registration = registration;
               console.log('ServiceWorker registration successful with scope: ', registration.scope);
-
-
-              new Promise(function(accept, reject){
-                if(navigator.serviceWorker.controller){
-                  accept()
-                } else {
-                  navigator.serviceWorker.oncontrollerchange = accept;
-                }
-              }).then(start);
-
-
-              // console.log("CONTROLLER ", navigator.serviceWorker.controller)
-              // navigator.serviceWorker.controller.postMessage('populate', [messageChannel.port2]);
-
             }).catch(function(err) {
-              // registration failed :(
               console.log('ServiceWorker registration failed: ', err);
             });
           }
-          // fetch('sw/populate', { credentials: 'include', method: 'post', body: new Blob('1,2,3,4,6')})
 
+          // how many we're downloading (will be replaced with worker output)
           var of = 0;
 
           // find all of the urls that we'd like to have saved
@@ -162,9 +153,7 @@
                   return item.uri;
                 })
 
-                // worker.queue(urls)
-                var channel = new MessageChannel();
-                navigator.serviceWorker.controller.postMessage({
+                worker.postMessage({
                   action: 'populate',
                   urls:urls
                 });
@@ -173,41 +162,16 @@
               })
           }
 
-          function start(){
-            index('/fitnessActivities',[])
-              .then(function(activities){
-                console.log("ACTIVITIES", activities)
-              })
+          index('/fitnessActivities',[])
 
-
-
-            // navigator.serviceWorker
-
-            window.addEventListener('message', function(event) {
-              console.log(">>>", event.data);
-              if(event.data.tasks){
-                document.getElementById('done').innerText = Math.max(of - event.data.tasks,0)
-              }
-            });
-          }
 
           $(document).on('click', '[data-worker]', function(){
-            navigator.serviceWorker.controller.postMessage({
+            worker.postMessage({
               action:$(this).data('worker')
             })
           })
 
-
-          // populateIndex('/fitnessActivities');
-
-
-
-
-
-
           /*
-
-
           // the state of the page
           var paused;
           var uris = [];

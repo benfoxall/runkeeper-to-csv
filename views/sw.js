@@ -30,7 +30,6 @@ if (self.clients && (typeof self.clients.claim === 'function')) {
 
 
 
-
 importScripts('bower_components/cache-polyfill/index.js');
 
 // storage
@@ -41,146 +40,12 @@ importScripts('db.js');
 importScripts('bower_components/async/dist/async.min.js');
 
 
-// any urls shoved into this queue will be downloaded
-// (unless they are already saved)
-var q = async.queue(function (uri, callback) {
-  db.activities
-    .where('uri').equals(uri)
-    .count(function(c){
-      if(c === 0)
-        return populateActivity(uri)
-          .then(function(){
-            downloaded.push(uri);
-          })
-    })
-    .then(function(){
-      console.log("notifying")
-      self.clients.matchAll().then(function(clients) {
-        clients.forEach(function(client) {
-          client.postMessage({
-            tasks: q.tasks.length
-          });
-        });
-      });
-    })
-    .then(callback)
-
-}, 2);
-
-
-// a list of all the activities that we've downloaded
-var downloaded = [];
-db.activities.toCollection().keys(function(keys){
-  downloaded = downloaded.concat(keys);
-})
-
-
-
-self.addEventListener('message', function(event) {
-  console.log("Message!", event.data)
-
-  switch (event.data.action) {
-
-    case 'populate':
-      q.push(event.data.urls.filter(function(url){
-        return downloaded.indexOf(url) > -1
-      }));
-      break;
-
-    case 'pause':
-      q.pause();
-      break;
-
-    case 'resume':
-      q.resume();
-      break;
-
-    case 'kill':
-      q.kill();
-      break;
-
-    case 'clear':
-      q.kill();
-      db.activities.clear()
-      .then(function(){
-        console.log("CLEARED")
-      })
-    break;
-
-
-    case 'echo':
-      console.log("notifying")
-      db.activities.toCollection().keys(function(keys){
-        self.clients.matchAll().then(function(clients) {
-          clients.forEach(function(client) {
-            client.postMessage({
-              tasks: q.tasks.length,
-              downloaded: keys.length,
-              keys: keys
-            });
-          });
-        });
-      })
-      break;
-
-  }
-
-});
-
-
-function populateActivity(uri){
-  return fetch('data' + uri, { credentials: 'include' })
-          .then(function(res){ return res.json() })
-          .then(function(data){
-            return db.activities.put(data)
-          })
-}
-
-
-function populateIndex(url) {
-  return fetch('/data' + url, { credentials: 'include' })
-    .then(function(res){
-      return res.json()
-    })
-    .then(function(data){
-
-      // push the urls into the queue
-      q.push(data.items.map(function(item){
-        return item.uri;
-      }));
-
-      // recurse if more to get
-      if(data.next) return populateIndex(data.next);
-    })
-}
-
-
-function downloadState(){
-  return {
-    complete: downloaded.length,
-    queued: q.tasks.length
-  }
-}
-
-function jsonResponse(json){
-  return new Response(JSON.stringify(json), { 'Content-Type': 'application/json' } )
-}
 
 self.addEventListener('install', function(event) {
   console.log("installing SW")
 });
 
 self.addEventListener('fetch', function(event) {
-
-  if(event.request.url.match(/sw\/state$/)){
-    event.respondWith(
-      jsonResponse(downloadState())
-    )
-  }
-
-  if(event.request.url.match(/sw\/populate$/)){
-    event.respondWith(new Response("populating"))
-  }
 
   if(event.request.url.match(/sw\/data$/)){
     event.respondWith(summaryResponse())
