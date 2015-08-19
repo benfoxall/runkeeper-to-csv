@@ -39,6 +39,8 @@ importScripts('db.js');
 // api retrieval
 importScripts('bower_components/async/dist/async.min.js');
 
+// geojson helpers
+importScripts('geofn.js');
 
 
 self.addEventListener('install', function(event) {
@@ -57,6 +59,11 @@ self.addEventListener('fetch', function(event) {
 
     if(event.request.url.match(/sw\/paths\.csv$/)){
       event.respondWith(pathsResponse())
+    }
+
+
+    if(event.request.url.match(/sw\/geo\.json$/)){
+      event.respondWith(geoJSONResponse())
     }
 
 });
@@ -161,4 +168,54 @@ function csv(array){
       item.replace(/[\",]/g,'') :
       item;
   }).join(',')
+}
+
+
+// GEO JSON
+
+function geoJSONResponse(){
+  return geoJSON()
+    .then(function(geo){
+      return new Response( JSON.stringify(geo), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    })
+}
+
+function geoJSON() {
+  var geo = {
+    type: "FeatureCollection",
+    features: []
+  }
+
+  return db
+    .activities
+
+    .filter(function(activity){
+      return activity.path && activity.path.length
+    })
+
+    .each(function(activity){
+
+      var coords = activity.path.map(function(p){
+        return [p.longitude, p.latitude, Math.round(p.altitude)]
+      });
+
+      geo.features.push({
+        "type": "Feature",
+        "bbox": geofn.bounds(coords),
+        "geometry": {
+          "type": "LineString",
+          "coordinates": coords
+          },
+        "properties" : {
+          "activity": activity.activity,
+          "centroid": geofn.centroid(coords),
+          "total_distance": activity.total_distance
+          }
+        })
+    })
+    .then(function(){
+      return geo;
+    });
 }

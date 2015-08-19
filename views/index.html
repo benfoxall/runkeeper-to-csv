@@ -106,9 +106,10 @@
             </div>
 
             <p class="downloads">
-              <a class="btn btn-default" href="sw/summary.csv" x-download target="_blank">summary.csv</a>
-              <a class="btn btn-default" href="sw/distances.csv" x-download target="_blank">distances.csv</a>
-              <a class="btn btn-default" href="sw/paths.csv" x-download target="_blank">paths.csv</a>
+              <a class="btn btn-default" href="sw/distances.csv" data-download="distances.csv">distances.csv</a>
+              <a class="btn btn-default" href="sw/summary.csv" data-download="summary.csv">summary.csv</a>
+              <a class="btn btn-default" href="sw/paths.csv" data-download="paths.csv">paths.csv</a>
+              <a class="btn btn-default" href="sw/geo.json" data-download="geo.csv">geo.json</a>
               <span class="help-block">a partial file can be saved while fetching more data</span>
             </p>
 
@@ -118,6 +119,30 @@
 
         <script src="bower_components/react/react.js"></script>
         <script src="ui.js"></script>
+
+        <script src="bower_components/FileSaver/FileSaver.js"></script>
+        <script type="text/javascript">
+          // a work around for https://code.google.com/p/chromium/issues/detail?id=468227
+          document.addEventListener('click', function(e){
+            if(e.target.dataset.download){
+              e.preventDefault();
+
+              if(e.target.classList.contains('disabled')){
+                return;
+              }
+
+              e.target.classList.add('disabled')
+
+              fetch(e.target.href)
+                .then(function(res){ return res.blob(); })
+                .then(function(b){
+                  e.target.classList.remove('disabled')
+                  saveAs(b, e.target.dataset.download)
+                })
+            }
+          })
+        </script>
+
       {{/user}}
 
     </div>
