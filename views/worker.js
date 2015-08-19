@@ -57,17 +57,17 @@ db.activities.toCollection().keys(function(keys){
   downloaded = downloaded.concat(keys);
 })
 
-
+// this would be cooler as an actual state thing
+var started = false;
 
 self.addEventListener('message', function(event) {
   console.log("WORKER<<", event.data)
 
   switch (event.data.action) {
 
-    case 'populate':
-      urls.push.apply(urls,event.data.urls)
-      q.push(event.data.urls);
-      update();
+    case 'start':
+      if(!started) index('/fitnessActivities',[]);
+      started = true;
       break;
 
     case 'pause':
@@ -88,20 +88,30 @@ self.addEventListener('message', function(event) {
       .then(function(){
         console.log("CLEARED")
       })
-    break;
-
-
-    case 'echo':
-      console.log("notifying")
-      db.activities.toCollection().keys(function(keys){
-        postMessage({
-          tasks: q.tasks.length,
-          downloaded: keys.length,
-          keys: keys
-        });
-      })
-      break;
-
   }
 
 });
+
+
+
+// find all of the urls that we'd like to have saved
+function index(url) {
+  if(!url) return
+
+  return fetch('/data' + url, { credentials: 'include' })
+    .then(function(res){
+      return res.json();
+    })
+    .then(function(json){
+
+      var _urls = json.items.map(function(item){
+        return item.uri;
+      })
+
+      urls.push.apply(urls,_urls)
+      q.push(_urls);
+      update();
+
+      return index(json.next)
+    })
+}

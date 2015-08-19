@@ -28,3 +28,5 @@ node_modules
 
 # Development Environment Variables
 .env
+
+views/.module-cache/

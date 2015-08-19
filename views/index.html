@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html class="no-sw">
   <head>
     <meta charset="utf-8">
     <title>Runkeeper to csv</title>
@@ -12,7 +12,46 @@
       @-moz-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
       @-o-keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
       @keyframes pulse { from { opacity: 0.25; } to { opacity: 1; } }
+      .no-sw .downloads{
+        display:none;
+      }
+      .sw-registering .downloads{
+        display:block;
+        opacity:0.5;
+      }
+      .sw-registered .downloads{
+        display:block;
+        opacity:1;
+      }
+      .sw-failed .downloads{
+        background: red;
+      }
+      .sw-notice {
+        display:none;
+      }
+      .no-sw .sw-notice, .sw-failed .sw-notice{
+        display:block;
+      }
     </style>
+
+    <script type="text/javascript">
+
+      var htm = document.getElementsByTagName('html')[0];
+
+      if ((!location.port || location.port == "80") && location.protocol != 'https:') {
+        location.protocol = 'https:';
+      }
+
+      if ('serviceWorker' in navigator) {
+        htm.className = 'sw-registering';
+
+        navigator.serviceWorker.register('/sw.js').then(function(registration) {
+          htm.className = 'sw-registered';
+        }).catch(function(err) {
+          htm.className = 'sw-failed';
+        });
+      }
+    </script>
 
   </head>
   <body>
@@ -22,11 +61,6 @@
       <div class="page-header">
         <h1>
           Runkeeper to csv
-          <small>
-          <a href="#settings" data-toggle="modal" data-target="#settings">
-            <span class="glyphicon glyphicon-cog"></span>
-          </a>
-        </small>
         </h1>
       </div>
       <p class="lead">This fetches data from the <a href="http://developer.runkeeper.com/healthgraph">runkeeper healthgraph api</a> and converts it to csv documents</p>
@@ -50,24 +84,26 @@
 
             <hr />
 
-            <h1 id="status">
-              <i class="glyphicon glyphicon-record"></i>
-              <span><span id="sofar">-</span>/<span id="total">-</span></span>
-            </h1>
+            <div id="ui"></div>
 
             <hr />
 
-            <p>
+            <div class="sw-notice">
+              <p class="lead">
+                WARNING: This page requires the
+                <a href="https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API">Service Worker API</a>
+                support
+              </p>
+              <p>
+                If you can see this message, it looks like it doesn't, or we've hit some kind of problem.
+              </p>
+              <p>
+                Try using a browser like chrome or firefox - if are, and you're still having issues,
+                please do <a href="twitter.com/benjaminbenben">get in touch</a>.
+              </p>
 
-                <a class="btn btn-default" href="#" data-worker="resume">resume</a>
-
-                <a class="btn btn-default" href="#" data-worker="pause">pause</a>
-                <a class="btn btn-default" href="#" data-worker="echo">echo</a>
-                <a class="btn btn-default" href="#" data-worker="clear">clear</a>
-
-            </p>
-
-            <hr />
+              <hr />
+            </div>
 
             <p class="downloads">
               <a class="btn btn-default" href="sw/summary.csv" x-download target="_blank">summary.csv</a>
@@ -76,97 +112,12 @@
               <span class="help-block">a partial file can be saved while fetching more data</span>
             </p>
 
+
           </div>
         </div>
 
-        <!-- settings modal -->
-        <div class="modal fade" id="settings">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title"><span class="glyphicon glyphicon-cog"></span></h4>
-              </div>
-              <div class="modal-body">
-                <p class="lead">
-                  Data from the api is stored in your browser to avoid re-downloading data from
-                  the api
-                </p>
-                <div class="form-group">
-                  <button class="btn btn-danger" data-action="clear">clear all data</button>
-                </div>
-                <p>
-                  Note, this data will be removed when you log out
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <script src="bower_components/jquery/dist/jquery.js"></script>
-        <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
-
-        <script type="text/javascript" src="bower_components/FileSaver/FileSaver.min.js"></script>
-        <script type="text/javascript" src="bower_components/async/dist/async.min.js"></script>
-        <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
-        <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
-
-        <!--script src="db.js"></script-->
-        <script type="text/javascript">
-          if ((!location.port || location.port == "80") && location.protocol != 'https:') {
-            location.protocol = 'https:';
-          }
-
-          var worker = new Worker("worker.js");
-
-          worker.onmessage = function(event) {
-            if(event.data.total){
-              document.getElementById('total').innerText = event.data.total;
-              document.getElementById('sofar').innerText = event.data.sofar;
-            }
-            console.log("WINDOW>>", event.data)
-          };
-
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').then(function(registration) {
-              console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            }).catch(function(err) {
-              console.log('ServiceWorker registration failed: ', err);
-            });
-          }
-
-
-          // find all of the urls that we'd like to have saved
-          function index(url) {
-            if(!url) return
-
-            return fetch('/data' + url, { credentials: 'include' })
-              .then(function(res){
-                return res.json();
-              })
-              .then(function(json){
-
-                worker.postMessage({
-                  action: 'populate',
-                  urls: json.items.map(function(item){
-                    return item.uri;
-                  })
-                });
-
-                return index(json.next)
-              })
-          }
-
-          index('/fitnessActivities',[])
-
-
-          $(document).on('click', '[data-worker]', function(){
-            worker.postMessage({
-              action:$(this).data('worker')
-            })
-          })
-
-        </script>
+        <script src="bower_components/react/react.js"></script>
+        <script src="ui.js"></script>
       {{/user}}
 
     </div>
