@@ -47,9 +47,17 @@ self.addEventListener('install', function(event) {
 
 self.addEventListener('fetch', function(event) {
 
-  if(event.request.url.match(/sw\/data$/)){
-    event.respondWith(summaryResponse())
-  }
+    if(event.request.url.match(/sw\/summary\.csv$/)){
+      event.respondWith(summaryResponse())
+    }
+
+    if(event.request.url.match(/sw\/distances\.csv$/)){
+      event.respondWith(distancesResponse())
+    }
+
+    if(event.request.url.match(/sw\/paths\.csv$/)){
+      event.respondWith(pathsResponse())
+    }
 
 });
 
@@ -82,6 +90,60 @@ function summaryResponse(){
 
 }
 
+
+
+function distancesResponse(){
+  console.time('build distances')
+
+  var data = [new Blob(['uri, timestamp, distance\n'])];
+
+  return db
+    .activities
+    .reverse()
+    .each(function(activity){
+      data.push(
+        new Blob([activity.distance.map(function(d){
+          return csv([activity.uri, d.timestamp, d.distance])
+        }).join('\n') + '\n'])
+      );
+    })
+    .then(function(){
+      console.timeEnd('build distances');
+
+      var blob = new Blob(data);
+
+      return new Response( blob, {
+        headers: { 'Content-Type': 'text/csv' }
+      });
+    })
+
+}
+
+function pathsResponse(){
+  console.time('build paths')
+
+  var data = [new Blob(['uri, timestamp, altitude, latitude, longitude\n'])];
+
+  return db
+    .activities
+    .reverse()
+    .each(function(activity){
+      data.push(
+        new Blob([activity.path.map(function(d){
+          return csv([activity.uri, d.timestamp, d.altitude, d.latitude, d.longitude])
+        }).join('\n') + '\n'])
+      );
+    })
+    .then(function(){
+      console.timeEnd('build paths');
+
+      var blob = new Blob(data);
+
+      return new Response( blob, {
+        headers: { 'Content-Type': 'text/csv' }
+      });
+    })
+}
 
 
 // pull out a row of keys
