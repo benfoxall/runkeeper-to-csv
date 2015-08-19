@@ -6,7 +6,7 @@
 
 
 
-// DEV STUFF
+// Grab control (in case I've got more than one tab open by accident)
 
 if (typeof self.skipWaiting === 'function') {
   console.log('self.skipWaiting() is supported.');
@@ -42,31 +42,83 @@ importScripts('bower_components/async/dist/async.min.js');
 // geojson helpers
 importScripts('geofn.js');
 
+// all the responses could go into the cache
+// though indexeddb allows them to be carved
+// up a bit easier
+var CACHE_NAME = "RK_DATA";
 
 self.addEventListener('install', function(event) {
-  console.log("installing SW")
+  console.log("installing SW");
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          return caches.delete(cacheName);
+        })
+      );
+    })
+  );
 });
 
 self.addEventListener('fetch', function(event) {
 
     if(event.request.url.match(/sw\/summary\.csv$/)){
-      event.respondWith(summaryResponse())
+      respond(event, summaryResponse)
     }
-
     if(event.request.url.match(/sw\/distances\.csv$/)){
-      event.respondWith(distancesResponse())
+      respond(event, distancesResponse)
     }
 
     if(event.request.url.match(/sw\/paths\.csv$/)){
-      event.respondWith(pathsResponse())
+      respond(event, pathsResponse)
     }
 
-
     if(event.request.url.match(/sw\/geo\.json$/)){
-      event.respondWith(geoJSONResponse())
+      respond(event, geoJSONResponse)
+    }
+
+    if(event.request.url.match(/sw\/geo\.simple\.json$/)){
+      respond(event, geoJSONResponse)
+    }
+
+    if(event.request.url.match(/sw\/expire-cache$/)){
+      event.respondWith(
+        caches.delete(CACHE_NAME)
+        .then(function(){
+          return new Response("okay")
+        })
+      )
     }
 
 });
+
+function respond(event, actual){
+  event.respondWith(
+    caches.match(event.request)
+    .then(function(cached){
+      if(cached) {
+        console.log("CACHE FUCK YEAH")
+        return cached;
+      }
+
+      return actual()
+        .then(function(response){
+
+          var responseToCache = response.clone();
+
+          caches.open(CACHE_NAME)
+            .then(function(cache) {
+              cache.put(event.request, responseToCache);
+            });
+
+          return response;
+
+        })
+
+    })
+  )
+
+}
 
 
 function summaryResponse(){

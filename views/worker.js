@@ -34,6 +34,9 @@ var q = async.queue(function (uri, callback) {
           .then(function(){
             downloaded.push(uri);
           })
+          .then(function(){
+            fetch('/sw/expire-cache');
+          })
     })
     .then(update)
     .then(callback)
@@ -86,6 +89,7 @@ self.addEventListener('message', function(event) {
       q.kill();
       db.activities.clear()
       .then(function(){
+        fetch('/sw/expire-cache');
         console.log("CLEARED")
       })
   }
