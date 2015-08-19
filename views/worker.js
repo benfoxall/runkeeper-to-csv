@@ -8,6 +8,21 @@ importScripts('bower_components/async/dist/async.min.js');
 importScripts('db.js');
 
 
+var downloaded = [],
+    urls       = [];
+
+// send back to the UI
+function update(){
+  // inefficient, but kind of correct
+  postMessage({
+    total: urls.length,
+    sofar: urls.reduce(function(total, url){
+      return downloaded.indexOf(url) == -1 ? total : total + 1;
+    }, 0)
+  })
+}
+
+
 // any urls shoved into this queue will be downloaded
 // (unless they are already saved)
 var q = async.queue(function (uri, callback) {
@@ -20,11 +35,7 @@ var q = async.queue(function (uri, callback) {
             downloaded.push(uri);
           })
     })
-    .then(function(){
-      postMessage({
-        tasks: q.tasks.length
-      })
-    })
+    .then(update)
     .then(callback)
 
 }, 2);
@@ -49,12 +60,14 @@ db.activities.toCollection().keys(function(keys){
 
 
 self.addEventListener('message', function(event) {
-  console.log("Message!", event.data)
+  console.log("WORKER<<", event.data)
 
   switch (event.data.action) {
 
     case 'populate':
+      urls.push.apply(urls,event.data.urls)
       q.push(event.data.urls);
+      update();
       break;
 
     case 'pause':

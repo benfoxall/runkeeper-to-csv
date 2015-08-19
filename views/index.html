@@ -52,7 +52,7 @@
 
             <h1 id="status">
               <i class="glyphicon glyphicon-record"></i>
-              <span><span id="done">-</span>/<span id="of">-</span></span>
+              <span><span id="sofar">-</span>/<span id="total">-</span></span>
             </h1>
 
             <hr />
@@ -120,10 +120,11 @@
           var worker = new Worker("worker.js");
 
           worker.onmessage = function(event) {
-            console.log(">>>", event.data);
-            if(event.data.tasks){
-              document.getElementById('done').innerText = Math.max(of - event.data.tasks,0)
+            if(event.data.total){
+              document.getElementById('total').innerText = event.data.total;
+              document.getElementById('sofar').innerText = event.data.sofar;
             }
+            console.log("WINDOW>>", event.data)
           };
 
           if ('serviceWorker' in navigator) {
@@ -134,31 +135,25 @@
             });
           }
 
-          // how many we're downloading (will be replaced with worker output)
-          var of = 0;
 
           // find all of the urls that we'd like to have saved
-          function index(url, rest) {
-
-            document.getElementById('of').innerText = of = rest.length;
-
-            if(!url) return rest;
+          function index(url) {
+            if(!url) return
 
             return fetch('/data' + url, { credentials: 'include' })
               .then(function(res){
                 return res.json();
               })
               .then(function(json){
-                var urls = json.items.map(function(item){
-                  return item.uri;
-                })
 
                 worker.postMessage({
                   action: 'populate',
-                  urls:urls
+                  urls: json.items.map(function(item){
+                    return item.uri;
+                  })
                 });
 
-                return index(json.next, urls.concat(rest))
+                return index(json.next)
               })
           }
 
