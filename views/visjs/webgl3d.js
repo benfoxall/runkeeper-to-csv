@@ -43,12 +43,22 @@ window.vis.webgl3d = function(element){
 
 
     // find target from bounding box (url hash)
-    var p = geofn.cartesian([(box[0] + box[1])/2, (box[2] + box[3])/2, (box[4] + box[5])/2]);
+    var p = geofn.cartesian(box);
     var target = new THREE.Vector3( p[0], p[1], p[2] )
 
     // rotate so that target is at 0,0 in the world view
     world.quaternion.setFromUnitVectors(target.clone().normalize(), new THREE.Vector3(0,1,0))
     world.position.y = - target.length()
+
+    window.focusOn = function(coords){
+      // todo animate
+      var p = geofn.cartesian(coords);
+      var target = new THREE.Vector3( p[0], p[1], p[2] )
+
+      // rotate so that target is at 0,0 in the world view
+      world.quaternion.setFromUnitVectors(target.clone().normalize(), new THREE.Vector3(0,1,0))
+      world.position.y = - target.length()
+    }
 
 
     camera.position.z = 200;

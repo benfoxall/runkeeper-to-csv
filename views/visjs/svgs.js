@@ -145,7 +145,10 @@ window.vis.svgs = function(element){
         .attr('r', 0)
         .on('click', function(d){
           console.log(d)
-          window.location.hash = 'box=' + d.bbox.join(',')
+          window.location.hash = 'box=' + d.centroid.join(',');
+          if(window.focusOn){
+            window.focusOn(d.centroid)
+          }
         })
         .transition()
         .delay(function(d,i){return 7000 + i*100})
