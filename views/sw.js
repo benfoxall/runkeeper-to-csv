@@ -41,6 +41,8 @@ importScripts('bower_components/async/dist/async.min.js');
 
 // geojson helpers
 importScripts('geofn.js');
+importScripts('simplify-geojson.bundle.js');
+var simplify = require('simplify-geojson');
 
 // all the responses could go into the cache
 // though indexeddb allows them to be carved
@@ -78,7 +80,7 @@ self.addEventListener('fetch', function(event) {
     }
 
     if(event.request.url.match(/sw\/geo\.simple\.json$/)){
-      respond(event, geoJSONResponse)
+      respond(event, geoJSONResponseSimple)
     }
 
     if(event.request.url.match(/sw\/expire-cache$/)){
@@ -228,6 +230,18 @@ function csv(array){
 function geoJSONResponse(){
   return geoJSON()
     .then(function(geo){
+      return new Response( JSON.stringify(geo), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    })
+}
+
+function geoJSONResponseSimple(){
+  return geoJSON()
+    .then(function(geo){
+      // roughly 80% reduction for my data
+      simplify(geo, 0.0001, true);
+
       return new Response( JSON.stringify(geo), {
         headers: { 'Content-Type': 'application/json' }
       });
