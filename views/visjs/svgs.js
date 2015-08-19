@@ -12,49 +12,8 @@ window.vis.svgs = function(element){
     .attr('width', w)
     .attr('height', h);
 
-
-  var geo = window.geo = {
-    type: "FeatureCollection",
-    features: []
-  }
-  var __t;
-
-  db
-    .activities
-
-    .filter(function(activity){
-      return activity.path && activity.path.length
-    })
-
-    // .limit(20)
-
-    .each(function(activity){
-      if(!__t) console.time("requesting")
-
-      var coords = activity.path.map(function(p){
-        return [p.longitude, p.latitude, Math.round(p.altitude)]
-      });
-
-      geo.features.push({
-        "type": "Feature",
-        "bbox": geofn.bounds(coords),
-        "geometry": {
-          "type": "LineString",
-          "coordinates": coords
-          },
-        "properties" : {
-          "activity": activity.activity,
-          "centroid": geofn.centroid(coords),
-          "total_distance": activity.total_distance
-          }
-        })
-    })
-    .then(function(){
-
-      console.timeEnd("requesting")
-
-      // roughly 80% reduction for my data
-      simplify(geo, 0.0001, true);
+  d3.json('/sw/geo.simple.json',function(error, geo) {
+    if(error) return console.error("Unable to get json", error);
 
       var groups = geofn
                     .group_bounds(geo.features.map(function(f){
