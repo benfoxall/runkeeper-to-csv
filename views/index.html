@@ -52,8 +52,20 @@
 
             <h1 id="status">
               <i class="glyphicon glyphicon-record"></i>
-              <span>-</span>
+              <span><span id="done">-</span>/<span id="of">-</span></span>
             </h1>
+
+            <hr />
+
+            <p>
+
+                <a class="btn btn-default" href="#" data-worker="resume">resume</a>
+
+                <a class="btn btn-default" href="#" data-worker="pause">pause</a>
+                <a class="btn btn-default" href="#" data-worker="echo">echo</a>
+                <a class="btn btn-default" href="#" data-worker="clear">clear</a>
+
+            </p>
 
             <hr />
 
@@ -99,8 +111,102 @@
         <script type="text/javascript" src="bower_components/reqwest/reqwest.min.js"></script>
         <script type="text/javascript" src="bower_components/dexie/dist/latest/Dexie.min.js"></script>
 
-        <script src="db.js"></script>
+        <!--script src="db.js"></script-->
         <script type="text/javascript">
+          if ((!location.port || location.port == "80") && location.protocol != 'https:') {
+            location.protocol = 'https:';
+          }
+
+
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(function(registration) {
+              // Registration was successful
+              window.registration = registration;
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+
+
+              new Promise(function(accept, reject){
+                if(navigator.serviceWorker.controller){
+                  accept()
+                } else {
+                  navigator.serviceWorker.oncontrollerchange = accept;
+                }
+              }).then(start);
+
+
+              // console.log("CONTROLLER ", navigator.serviceWorker.controller)
+              // navigator.serviceWorker.controller.postMessage('populate', [messageChannel.port2]);
+
+            }).catch(function(err) {
+              // registration failed :(
+              console.log('ServiceWorker registration failed: ', err);
+            });
+          }
+          // fetch('sw/populate', { credentials: 'include', method: 'post', body: new Blob('1,2,3,4,6')})
+
+          var of = 0;
+
+          // find all of the urls that we'd like to have saved
+          function index(url, rest) {
+
+            document.getElementById('of').innerText = of = rest.length;
+
+            if(!url) return rest;
+
+            return fetch('/data' + url, { credentials: 'include' })
+              .then(function(res){
+                return res.json();
+              })
+              .then(function(json){
+                var urls = json.items.map(function(item){
+                  return item.uri;
+                })
+
+                // worker.queue(urls)
+                var channel = new MessageChannel();
+                navigator.serviceWorker.controller.postMessage({
+                  action: 'populate',
+                  urls:urls
+                });
+
+                return index(json.next, urls.concat(rest))
+              })
+          }
+
+          function start(){
+            index('/fitnessActivities',[])
+              .then(function(activities){
+                console.log("ACTIVITIES", activities)
+              })
+
+
+
+            // navigator.serviceWorker
+
+            window.addEventListener('message', function(event) {
+              console.log(">>>", event.data);
+              if(event.data.tasks){
+                document.getElementById('done').innerText = Math.max(of - event.data.tasks,0)
+              }
+            });
+          }
+
+          $(document).on('click', '[data-worker]', function(){
+            navigator.serviceWorker.controller.postMessage({
+              action:$(this).data('worker')
+            })
+          })
+
+
+          // populateIndex('/fitnessActivities');
+
+
+
+
+
+
+          /*
+
 
           // the state of the page
           var paused;
@@ -163,9 +269,13 @@
 
 
           function populateIndex(url) {
-            reqwest('/data' + url)
+            fetch('/data' + url)
               .then(function(res){
-                var items = res.items.map(function(item){
+                return res.json();
+              })
+              .then(function(json){
+                console.log("JSON", json)
+                var items = json.items.map(function(item){
                   return item.uri;
                 });
                 uris = uris.concat(items);
@@ -173,11 +283,11 @@
                 q.push(items);
 
                 UI();
-                if(res.next) populateIndex(res.next);
+                // if(json.next) populateIndex(json.next);
               })
           }
 
-          populateIndex('/fitnessActivities');
+          // populateIndex('/fitnessActivities');
 
           // todo - UI update
           $(document).on('click', '[data-action=clear]', function(){
@@ -294,7 +404,7 @@
                 item;
             }).join(',')
           }
-
+          */
         </script>
       {{/user}}
 
