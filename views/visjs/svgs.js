@@ -33,12 +33,6 @@ window.vis.svgs = function(element){
           })
       }
 
-      d3.layout.pack()
-        .value(function(){return 1})
-        .size([w,h])
-        (group_layout)
-
-
       // assign groups to features
       geo.features.forEach(function(feature, i){
         for (var i = 0; i < groups.length; i++) {
@@ -49,6 +43,13 @@ window.vis.svgs = function(element){
           }
         }
       })
+
+      // WARNING layout can re-order group_layout.children
+      d3.layout.pack()
+        .value(function(){return 1})
+        .size([w,h])
+        (group_layout)
+
 
       group_layout.children.forEach(function(group){
         group.centroid = d3.transpose(group.centroids)
