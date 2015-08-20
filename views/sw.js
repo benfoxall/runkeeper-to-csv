@@ -95,31 +95,36 @@ self.addEventListener('fetch', function(event) {
 });
 
 function respond(event, actual){
+
   event.respondWith(
     caches.match(event.request)
     .then(function(cached){
-      if(cached) {
-        console.log("CACHE FUCK YEAH")
-        return cached;
-      }
-
-      return actual()
-        .then(function(response){
-
-          var responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then(function(cache) {
-              cache.put(event.request, responseToCache);
-            });
-
-          return response;
-
-        })
-
+      if(cached)
+        return cached
+      else
+        return respondAndCache();
+    })
+    .catch(function(e){
+      console.error("a pretty weird thing happend", e)
+      return respondAndCache();
     })
   )
 
+  function respondAndCache(){
+    return actual()
+      .then(function(response){
+
+        var responseToCache = response.clone();
+
+        caches.open(CACHE_NAME)
+          .then(function(cache) {
+            cache.put(event.request, responseToCache);
+          });
+
+        return response;
+
+      })
+  }
 }
 
 
