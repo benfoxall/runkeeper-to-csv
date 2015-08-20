@@ -95,6 +95,9 @@ db
 
   })
 
+  .then(function(){
+    console.log('render time: %s seconds', (window.performance.now()/1000).toFixed(2))
+  })
 
 function render() {
 	requestAnimationFrame( render );
