@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Runkeeper to csv</title>
+    <link rel="stylesheet" type="text/css" href="/bower_components/bootstrap/dist/css/bootstrap.css">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style media="screen">
+      canvas,svg{border: 1px dotted #ccc;}
+      path.activity {
+        stroke-width: 1px;
+        stroke: rgba(255, 150, 0, 0.8);
+        /*stroke: #f80;*/
+        stroke-linejoin: round;
+        fill: none;
+      }
+      path.graticule {
+        stroke-width: 1px;
+        stroke: #ccc;
+        fill: none;
+      }
+      circle.choice {
+        transition:opacity .5s;
+        opacity: 0.02;
+        cursor: pointer;
+      }
+      circle.choice:hover{
+        opacity: .6
+      }
+      #vis{
+        min-height:600px;
+      }
+    </style>
+
+  </head>
+  <body>
+    <a href="https://github.com/benfoxall/runkeeper-to-csv"><img style="position: absolute; top: 0; right: 0; border: 0;" src="/gh.png" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"></a>
+
+    <div class="container">
+
+      <div class="page-header">
+        <h1>
+          Canvas
+        </h1>
+      </div>
+
+      <p class="lead">Drawing pixels directly to canvas in an (accidental) Direct Polar / Equirectangular projection</p>
+
+      <div class="panel panel-default">
+        <div class="panel-body">
+          <canvas id="canvas" width="600" height="300"></canvas>
+
+          <p>
+            My places:
+            <a href="#" data-poi='{"lng": 0, "lat": 0, "scale":1}'>Everywhere</a>
+            <a href="#" data-poi='{"lng":-1.8833,"lat":54.5,"scale":30}'>UK</a>
+            <a href="#" data-poi='{"lng": -1.2322173322475571, "lat": 51.75219395439743, "scale": 100}'>South England</a>
+            <a href="#" data-poi='{"lng": -1.2322173322475571, "lat": 51.75219395439743, "scale": 2000}'>Oxford</a>
+            <a href="#" data-poi='{"lng": -0.1897, "lat":50.8429, "scale":3100}'>Brighton</a>
+            <a href="#" data-poi='{"lng": -116.9667, "lat": 51.3019, "scale": 2000}'>Golden</a>
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <script src="/bower_components/threejs/build/three.js"></script>
+    <script src="/three.orbit.js"></script>
+    <script src="/bower_components/dexie/dist/latest/Dexie.min.js"></script>
+
+    <script src="/geofn.js"></script>
+    <script src="/db.js"></script>
+
+    <script src="canvas.js"></script>
+
+  </body>
+</html>
