@@ -67,37 +67,46 @@ camera.position.y = 100;
 controls = new THREE.OrbitControls( camera );
 controls.damping = 0.2;
 
-db
-  .activities
+fetch('/sw/binary.path.b')
+  .then(function(res){return res.blob()})
+  .then(function(b){return blobToFloat32Array(b)})
+  .then(function(data){
 
-  .filter(function(activity){
-    return activity.path && activity.path.length
-  })
 
-  .each(function(activity){
+    for (var i = 3, off = 0; i < data.length; i += 3) {
+      // more than 500m, then create a new path
+      if(
+        Math.abs(data[i] - data[i-3]) > 500 ||
+        Math.abs(data[i+1] - data[i+1-3]) > 500 ||
+        Math.abs(data[i+2] - data[i+2-3]) > 500
+      ) {
+        var path = new Float32Array(data.buffer, off * 4, i - off);
+        off = i;
 
-    // could simplify here if we hit any problems
+        var geometry = new THREE.BufferGeometry();
+        geometry.addAttribute( 'position', new THREE.BufferAttribute( path, 3 ) );
+        geometry.computeBoundingSphere();
+        var mesh = new THREE.Line( geometry, line_material);
+        globe.add( mesh );
 
-    var data = new Float32Array(activity.path.length * 3);
+      }
+    }
 
-    activity.path.forEach(function(p, i){
-      data.set(geofn.cartesian([p.longitude, p.latitude, p.altitude]), i*3)
-    });
-
-    var geometry = new THREE.BufferGeometry();
-
-    geometry.addAttribute( 'position', new THREE.BufferAttribute( data, 3 ) );
-    geometry.computeBoundingSphere();
-
-    mesh = new THREE.Line( geometry, line_material );
-
-    globe.add( mesh );
-
-  })
-
-  .then(function(){
     console.log('render time: %s seconds', (window.performance.now()/1000).toFixed(2))
   })
+
+
+function blobToFloat32Array(blob){
+  return new Promise(function(accept, reject){
+    var reader = new FileReader();
+    reader.addEventListener("loadend", function() {
+      accept(new Float32Array(reader.result, blob.length/4))
+    });
+    // todo handle fail
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
 
 function render() {
 	requestAnimationFrame( render );

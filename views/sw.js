@@ -83,6 +83,10 @@ self.addEventListener('fetch', function(event) {
       respond(event, geoJSONResponseSimple)
     }
 
+    if(event.request.url.match(/sw\/binary\.path\.b$/)){
+      respond(event, binaryPathResponse)
+    }
+
     if(event.request.url.match(/sw\/expire-cache$/)){
       event.respondWith(
         caches.delete(CACHE_NAME)
@@ -289,4 +293,42 @@ function geoJSON() {
     .then(function(){
       return geo;
     });
+}
+
+
+// Binary
+
+function binaryPathResponse(){
+
+  var paths = [];
+  var output;
+
+  return db
+    .activities
+
+    .filter(function(activity){
+      return activity.path && activity.path.length
+    })
+
+    .each(function(activity){
+
+      // millis since epoch
+      // var start = new Date(activity.start_time).getTime();
+
+      var path = new Float32Array(activity.path.length * 3);
+
+      activity.path.forEach(function(p, i){
+        path.set(geofn.cartesian([p.longitude, p.latitude, p.altitude]), i*3)
+      })
+
+      paths.push(path);
+
+    })
+
+    .then(function(){
+      return new Response( new Blob(paths), {
+        headers: { 'Content-Type': 'application/octet-stream' }
+      });
+    })
+
 }
