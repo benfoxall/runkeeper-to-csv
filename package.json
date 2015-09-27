@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/benfoxall/rk-data",
   "dependencies": {
-    "connect-redis": "2.5.0",
+    "connect-redis": "2.5.1",
     "dotenv": "^1.2.0",
     "express": "4.13.2",
     "express-session": "^1.11.3",
