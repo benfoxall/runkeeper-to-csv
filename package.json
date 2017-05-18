@@ -23,7 +23,7 @@
     "express": "4.13.3",
     "express-session": "^1.11.3",
     "hbs": "3.1.1",
-    "ioredis": "1.8.0",
+    "ioredis": "3.0.0",
     "passport": "0.2.2",
     "passport-runkeeper": "^0.1.2",
     "request": "2.64.0"
